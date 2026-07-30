@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
@@ -29,3 +30,7 @@ This project is configured for Vercel deployment with `vercel.json`.
 6. Deploy the app.
 
 The app will be served as a static site with fallback routing to `index.html`.
+=======
+# smart-navigation
+A GIS-based Smart Navigation System for the Gulmohar JVPD Scheme using React, Vite, Leaflet, and QGIS.
+>>>>>>> 0290cb7e22b0285fd6062638a8082e59fe463a91
