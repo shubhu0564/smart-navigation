@@ -1,75 +1,63 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { MapContainer as LeafletMap, TileLayer, Marker, Popup, Circle, Polyline, ImageOverlay } from 'react-leaflet'
+import { MapContainer as LeafletMap, TileLayer, Marker, Circle, Polyline } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet-routing-machine'
 import { LoaderCircle, MapPin, Route, Clock3 } from 'lucide-react'
 import { useNavigation } from '../hooks/useNavigation'
 import { useLiveLocation } from '../hooks/useLiveLocation'
 import { getText } from '../utils/helpers'
-import { landmarks, roadLabels } from '../data/landmarks'
-import overlayImage from '../assets/gis-overlay.svg'
 import FloatingActionBar from './FloatingActionBar'
-
-const categoryColors = {
-  Park: '#0f766e',
-  School: '#2563eb',
-  Government: '#7c3aed',
-  Community: '#ea580c',
-  Temple: '#b45309',
-  Institute: '#0ea5e9',
-  Club: '#f59e0b',
-  'Bus Stop': '#64748b',
-  'Public Toilet': '#ef4444',
-}
-
-const createIcon = (color, label, active = false) =>
-  L.divIcon({
-    className: 'custom-marker',
-    html: `<div style="background:${color}; color:white; border:2px solid white; border-radius:999px; width:${active ? 34 : 28}px; height:${active ? 34 : 28}px; display:flex; align-items:center; justify-content:center; font-size:${active ? 12 : 11}px; font-weight:700; box-shadow:0 6px 18px rgba(15,23,42,0.18);">${label}</div>`,
-    iconSize: [active ? 34 : 28, active ? 34 : 28],
-    iconAnchor: [active ? 17 : 14, active ? 17 : 14],
-  })
+import GeoJsonLayer from './GeoJsonLayer'
+import { filterLandmarksGeoJson } from '../utils/geoJsonUtils'
 
 export default function MapContainer() {
   const mapRef = useRef(null)
   const mapWrapperRef = useRef(null)
   const routingControlRef = useRef(null)
-  const popupRef = useRef(null)
-  const markerRefs = useRef({})
-  const { language, selectedLandmark, setSelectedLandmark, selectedCategory, searchQuery, setToast, enabledCategories, setRouteInfo } = useNavigation()
-  const { position, accuracy, speed, loading, error } = useLiveLocation()
+  const { language, selectedLandmark, setSelectedLandmark, selectedCategory, searchQuery, setToast, enabledCategories, setRouteInfo, geoJson, loading, error } = useNavigation()
+  const { position, accuracy, speed } = useLiveLocation()
   const [route, setRoute] = useState(null)
   const [routeSummary, setRouteSummary] = useState(null)
-  const [mapReady, setMapReady] = useState(false)
   const [routeDetails, setRouteDetails] = useState(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  const visibleLandmarks = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-    return landmarks.filter((landmark) => {
-      const categoryMatch = selectedCategory === 'all' || landmark.category === selectedCategory
-      const enabledMatch = enabledCategories.includes(landmark.category)
-      const searchMatch = !query || [landmark.name, landmark.road, landmark.category, landmark.id.toString()].some((value) => value.toLowerCase().includes(query))
-      return categoryMatch && enabledMatch && searchMatch
-    })
-  }, [searchQuery, selectedCategory, enabledCategories])
+  const visibleLandmarks = useMemo(
+    () => filterLandmarksGeoJson(geoJson.landmarks, selectedCategory, searchQuery, enabledCategories),
+    [geoJson.landmarks, selectedCategory, searchQuery, enabledCategories],
+  )
 
   useEffect(() => {
-    if (!mapRef.current) return
-    const bounds = [[19.101, 72.819], [19.111, 72.829]]
-    mapRef.current.fitBounds(bounds, { padding: [30, 30] })
-    setMapReady(true)
-  }, [])
+    if (!geoJson.siteBoundary || !mapRef.current) return
+    if (selectedCategory !== 'all') return
+    try {
+      const boundaryLayer = L.geoJSON(geoJson.siteBoundary)
+      const bounds = boundaryLayer.getBounds()
+      if (bounds.isValid()) {
+        mapRef.current.fitBounds(bounds, { padding: [30, 30] })
+      }
+    } catch (error) {
+      console.error('Failed to fitBounds from site boundary', error)
+    }
+  }, [geoJson.siteBoundary, selectedCategory])
+
+  useEffect(() => {
+    if (!visibleLandmarks?.features?.length || !mapRef.current) return
+    if (selectedCategory === 'all') return
+    try {
+      const landmarksLayer = L.geoJSON(visibleLandmarks)
+      const bounds = landmarksLayer.getBounds()
+      if (bounds.isValid()) {
+        mapRef.current.fitBounds(bounds, { padding: [30, 30] })
+      }
+    } catch (error) {
+      console.error('Failed to fit bounds for selected category', error)
+    }
+  }, [visibleLandmarks, selectedCategory])
 
   useEffect(() => {
     if (!selectedLandmark || !mapRef.current) return
-    const map = mapRef.current
-    map.flyTo([selectedLandmark.latitude, selectedLandmark.longitude], 18.5, { duration: 1.2 })
-    const marker = markerRefs.current[selectedLandmark.id]
-    if (marker) {
-      window.setTimeout(() => marker.openPopup?.(), 220)
-    }
+    mapRef.current.flyTo([selectedLandmark.latitude, selectedLandmark.longitude], 18.5, { duration: 1.2 })
   }, [selectedLandmark])
 
   useEffect(() => {
@@ -88,14 +76,14 @@ export default function MapContainer() {
     })
 
     routingControl.on('routesfound', (event) => {
-      const route = event.routes[0]
-      const summary = route.summary
+      const routeResult = event.routes[0]
+      const summary = routeResult.summary
       const walkingDistance = (summary.totalDistance / 1000).toFixed(1)
       const walkingTime = Math.max(3, Math.round(summary.totalTime / 60))
       const cyclingTime = Math.max(4, Math.round(walkingTime * 0.7))
       const drivingTime = Math.max(4, Math.round(walkingTime / 2))
       const arrivalTime = new Date(Date.now() + walkingTime * 60000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-      setRoute(route.coordinates.map((coord) => [coord.lat, coord.lng]))
+      setRoute(routeResult.coordinates.map((coord) => [coord.lat, coord.lng]))
       setRouteSummary({ distance: walkingDistance, time: walkingTime })
       setRouteDetails({
         walkingDistance,
@@ -131,7 +119,7 @@ export default function MapContainer() {
       setRouteDetails(null)
       setRouteInfo(null)
     }
-  }, [position, selectedLandmark])
+  }, [position, selectedLandmark, setRouteInfo, speed])
 
   const center = position ?? { lat: 19.105, lng: 72.824 }
 
@@ -204,21 +192,15 @@ export default function MapContainer() {
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <div>
           <p className="text-sm font-semibold text-teal-600">{getText({ en: 'Live GIS map', mr: 'थेट GIS नकाशा' }, language)}</p>
-          <p className="text-sm text-slate-500">{getText({ en: 'OpenStreetMap • live GPS • walking routes', mr: 'OpenStreetMap • थेट GPS • पादचारी मार्ग' }, language)}</p>
+          <p className="text-sm text-slate-500">{getText({ en: 'Satellite imagery • QGIS GeoJSON layers', mr: 'सॅटेलाइट प्रतिमा • QGIS GeoJSON स्तर' }, language)}</p>
         </div>
       </div>
 
       <div ref={mapWrapperRef} className="relative h-[460px] w-full bg-slate-100">
-        {!mapReady && !loading && (
-          <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center gap-3 bg-slate-50/90 px-4 text-center">
-            <MapPin className="text-teal-600" size={24} />
-            <p className="text-sm text-slate-600">{getText({ en: 'Preparing your live GIS view…', mr: 'तुमचा थेट GIS दृष्य तयार होत आहे…' }, language)}</p>
-          </div>
-        )}
         {loading && (
-          <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center gap-3 bg-slate-50/90 px-4 text-center">
+          <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center gap-3 bg-slate-50/80 px-4 text-center">
             <LoaderCircle className="animate-spin text-teal-600" size={24} />
-            <p className="text-sm text-slate-600">{getText({ en: 'Locating you…', mr: 'तुमचे स्थान शोधत आहे…' }, language)}</p>
+            <p className="text-sm text-slate-600">{getText({ en: 'Loading map data...', mr: 'नकाशा डेटा लोड करत आहे...' }, language)}</p>
           </div>
         )}
         {error && (
@@ -228,8 +210,40 @@ export default function MapContainer() {
         )}
 
         <LeafletMap ref={mapRef} center={[center.lat, center.lng]} zoom={16} scrollWheelZoom className="h-full w-full" whenCreated={(map) => { mapRef.current = map }}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' />
-          <ImageOverlay url={overlayImage} bounds={[[19.111, 72.819], [19.101, 72.829]]} opacity={0.4} />
+          <TileLayer
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            attribution='Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+          />
+
+          {geoJson.openSpaces && <GeoJsonLayer featureData={geoJson.openSpaces} layerKey="openSpaces" />}
+          {geoJson.buildings && <GeoJsonLayer featureData={geoJson.buildings} layerKey="buildings" />}
+          {geoJson.roads && <GeoJsonLayer featureData={geoJson.roads} layerKey="roads" />}
+          {geoJson.siteBoundary && <GeoJsonLayer featureData={geoJson.siteBoundary} layerKey="siteBoundary" />}
+          {visibleLandmarks && (
+            <GeoJsonLayer
+              featureData={visibleLandmarks}
+              layerKey="landmarks"
+              activeFeatureId={selectedLandmark?.id}
+              onFeatureClick={(feature) => {
+                const properties = feature?.properties || {}
+                const selected = {
+                  id: properties.id ?? `${feature?.geometry?.coordinates?.[1]}-${feature?.geometry?.coordinates?.[0]}`,
+                  name: properties.name ?? 'Unknown place',
+                  road: properties.road ?? properties.address ?? '',
+                  category: properties.category ?? 'Unknown',
+                  latitude: feature.geometry.coordinates[1],
+                  longitude: feature.geometry.coordinates[0],
+                  description: properties.description ?? properties.name ?? '',
+                  image: properties.image ?? null,
+                  address: properties.address ?? properties.road ?? '',
+                  rating: properties.rating ?? 4.6,
+                  steps: properties.steps ?? [],
+                }
+                setSelectedLandmark(selected)
+                setToast({ en: `Focused on ${selected.name}`, mr: `${selected.name}कडे केंद्रित केले` })
+              }}
+            />
+          )}
 
           {position && (
             <>
@@ -238,52 +252,7 @@ export default function MapContainer() {
             </>
           )}
 
-          {visibleLandmarks.map((landmark) => (
-            <Marker
-              key={landmark.id}
-              ref={(instance) => {
-                if (instance) {
-                  markerRefs.current[landmark.id] = instance
-                }
-              }}
-              position={[landmark.latitude, landmark.longitude]}
-              icon={createIcon(categoryColors[landmark.category] ?? '#0f766e', landmark.id.toString(), selectedLandmark?.id === landmark.id)}
-              eventHandlers={{
-                click: () => {
-                  setSelectedLandmark(landmark)
-                  setToast({ en: `Focused on ${landmark.name}`, mr: `${landmark.name}कडे केंद्रित केले` })
-                  if (popupRef.current) {
-                    popupRef.current = null
-                  }
-                },
-              }}
-            >
-              <Popup ref={popupRef}>
-                <div className="min-w-[220px] space-y-2 text-sm text-slate-700">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-900">{landmark.id}. {landmark.name}</p>
-                      <p className="text-xs text-slate-500">{landmark.road}</p>
-                    </div>
-                    <span className="rounded-full bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-700">{landmark.category}</span>
-                  </div>
-                  <p className="text-xs text-slate-600">{landmark.description}</p>
-                  <img src={landmark.image} alt={landmark.name} className="h-24 w-full rounded-xl object-cover" />
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={() => setSelectedLandmark(landmark)} className="rounded-full bg-teal-600 px-3 py-2 text-xs font-semibold text-white">Navigate</button>
-                    <a href={`https://www.google.com/maps/search/?api=1&query=${landmark.latitude},${landmark.longitude}`} target="_blank" rel="noreferrer" className="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">Open in Google Maps</a>
-                    <button type="button" onClick={shareLocation} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">Share</button>
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-
           {route && <Polyline positions={route} pathOptions={{ color: '#0f766e', weight: 5, opacity: 0.9 }} />}
-
-          {roadLabels.map((label) => (
-            <Marker key={label} position={[19.105, 72.824]} icon={L.divIcon({ className: 'road-label', html: `<div class="road-label-chip">${label}</div>`, iconSize: [120, 24], iconAnchor: [60, 12] })} />
-          ))}
         </LeafletMap>
         <FloatingActionBar onLocate={focusOnCurrentLocation} onNavigate={focusOnSelected} onReset={resetView} onGoogleMaps={openGoogleMaps} onFullscreen={toggleFullscreen} onLiveGps={focusOnCurrentLocation} />
       </div>

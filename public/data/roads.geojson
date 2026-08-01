@@ -1,0 +1,33 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Vidyanidhi Marg"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [72.824, 19.107],
+          [72.826, 19.108],
+          [72.828, 19.109]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Samarth Ramdas Marg"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [72.822, 19.106],
+          [72.824, 19.107],
+          [72.825, 19.109]
+        ]
+      }
+    }
+  ]
+}

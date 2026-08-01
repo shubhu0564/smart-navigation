@@ -1,0 +1,85 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "id": 1, "name": "Kishore Kumar Bagh", "road": "Vidyanidhi Marg", "category": "Park", "description": "A landscaped greenspace for relaxation and evening walks.", "image": "/assets/landmarks/kishore-kumar-bagh.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8265, 19.1082] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 2, "name": "Kaifi Azmi Park & Vijay Tendulkar Amphitheatre", "road": "Vidyanidhi Marg", "category": "Community", "description": "A cultural venue with open-air performances and civic gatherings.", "image": "/assets/landmarks/kaifi-azmi-park.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8274, 19.1089] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 3, "name": "Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies", "road": "Vidyanidhi Marg", "category": "Research Institute", "description": "A premier educational and architectural institution in the locality.", "image": "/assets/landmarks/kamla-raheja.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8279, 19.1097] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 4, "name": "Vrajlal Parekh Vidyanidhi High School", "road": "Vidyanidhi Marg", "category": "School", "description": "A landmark school campus serving the neighbourhood for decades.", "image": "/assets/landmarks/vrajlal-parekh.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8286, 19.1104] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 5, "name": "Manoj Kumar Garden", "road": "Cross Road No. 13", "category": "Park", "description": "A neighbourhood garden with shaded walking paths.", "image": "/assets/landmarks/manoj-kumar-garden.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8249, 19.1072] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 6, "name": "Smt. SB Aarya Vidya Mandir", "road": "Cross Road No. 13", "category": "School", "description": "An education hub with strong community connect.", "image": "/assets/landmarks/sb-aarya.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8241, 19.1068] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 7, "name": "Lokmanya Tilak Udyan", "road": "Samarth Ramdas Marg", "category": "Park", "description": "A civic park with open lawns and pedestrian access.", "image": "/assets/landmarks/lokmanya-tilak-udyan.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8227, 19.1061] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 8, "name": "Ecole Mondiale World School", "road": "Cross Road No. 7", "category": "School", "description": "An international school known for premium campus planning.", "image": "/assets/landmarks/ecole-mondiale.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8214, 19.1046] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 9, "name": "Gujarati Bhavan", "road": "Samarth Ramdas Marg", "category": "Community", "description": "A cultural and community landmark with civic events.", "image": "/assets/landmarks/gujarati-bhavan.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8230, 19.1056] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 10, "name": "Goa Bhavan", "road": "Cross Road No. 12", "category": "Community", "description": "A welcoming community venue with public amenities.", "image": "/assets/landmarks/goa-bhavan.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8237, 19.1041] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 11, "name": "CDAC – Centre for Development of Advanced Computing", "road": "Cross Road No. 9", "category": "Government", "description": "A technology and innovation institution in the ward area.", "image": "/assets/landmarks/cdac.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8223, 19.1034] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 12, "name": "Juhu Club Millennium", "road": "Dayaneshwar Road", "category": "Club", "description": "A premium social and recreational clubhouse.", "image": "/assets/landmarks/juhu-club.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8210, 19.1028] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 13, "name": "Shree Kalimata Temple", "road": "Dayaneshwar Road", "category": "Temple", "description": "A spiritually significant landmark with regular visitors.", "image": "/assets/landmarks/kalimata-temple.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8204, 19.1022] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 14, "name": "Manoranjan Park", "road": "Dayaneshwar Road", "category": "Park", "description": "A calm and accessible park for neighbourhood residents.", "image": "/assets/landmarks/manoranjan-park.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8198, 19.1018] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 15, "name": "Gulmohar Bus Stop", "road": "Gulmohar Road", "category": "Bus Stop", "description": "A key bus stop for local and feeder routes.", "image": "/assets/landmarks/gulmohar-bus-stop.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8252, 19.1064] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": 16, "name": "Public Toilet Complex", "road": "Cross Road No. 8", "category": "Public Toilet", "description": "Accessible public toilet facility near the central civic area.", "image": "/assets/landmarks/public-toilet.svg" },
+      "geometry": { "type": "Point", "coordinates": [72.8221, 19.1049] }
+    }
+  ]
+}

@@ -3,7 +3,7 @@ import { useNavigation } from './useNavigation'
 import { searchLandmarks } from '../utils/searchUtils'
 
 export function useSearch() {
-  const { landmarks, setSelectedLandmark, setSearchQuery, setToast } = useNavigation()
+  const { landmarks, selectedCategory, setSelectedLandmark, setSearchQuery, setToast } = useNavigation()
   const [inputValue, setInputValue] = useState('')
   const [suggestions, setSuggestions] = useState([])
   const [activeIndex, setActiveIndex] = useState(-1)
@@ -31,13 +31,14 @@ export function useSearch() {
 
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
     debounceRef.current = window.setTimeout(() => {
-      const matches = searchLandmarks(inputValue, landmarks)
+      const filteredLandmarks = selectedCategory && selectedCategory !== 'all' ? landmarks.filter((landmark) => landmark.category === selectedCategory) : landmarks
+      const matches = searchLandmarks(inputValue, filteredLandmarks)
       setSuggestions(matches.slice(0, 8))
       setActiveIndex(-1)
     }, 220)
 
     return () => window.clearTimeout(debounceRef.current)
-  }, [inputValue, landmarks, recentSearches])
+  }, [inputValue, landmarks, recentSearches, selectedCategory])
 
   const saveToHistory = (value) => {
     const trimmed = value.trim()
@@ -91,9 +92,14 @@ export function useSearch() {
     }
   }
 
+  const handleInputChange = (value) => {
+    setInputValue(value)
+    setSearchQuery(value)
+  }
+
   return {
     inputValue,
-    setInputValue,
+    setInputValue: handleInputChange,
     suggestions,
     activeIndex,
     setActiveIndex,

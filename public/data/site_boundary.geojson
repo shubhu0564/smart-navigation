@@ -1,0 +1,23 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Gulmohar JVPD Site Boundary"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [72.819, 19.101],
+            [72.829, 19.101],
+            [72.829, 19.111],
+            [72.819, 19.111],
+            [72.819, 19.101]
+          ]
+        ]
+      }
+    }
+  ]
+}

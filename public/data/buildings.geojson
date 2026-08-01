@@ -1,0 +1,43 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kamla Raheja Institute",
+        "category": "Institute"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [72.8275, 19.1095],
+            [72.8280, 19.1095],
+            [72.8280, 19.1100],
+            [72.8275, 19.1100],
+            [72.8275, 19.1095]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ecole Mondiale School",
+        "category": "School"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [72.8212, 19.1040],
+            [72.8218, 19.1040],
+            [72.8218, 19.1046],
+            [72.8212, 19.1046],
+            [72.8212, 19.1040]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,7 +1,9 @@
-import { landmarks } from '../data/landmarks'
 import LandmarkCard from '../components/LandmarkCard'
+import { useNavigation } from '../hooks/useNavigation'
 
 export default function NearbyPage() {
+  const { landmarks } = useNavigation()
+
   return (
     <div className="space-y-6">
       <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">

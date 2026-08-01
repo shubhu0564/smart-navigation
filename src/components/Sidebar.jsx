@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { X, MapPinned, Home, Search, Landmark, Trees, School, Building2, Church, Users, Bus, Toilet, Info } from 'lucide-react'
 import { useNavigation } from '../hooks/useNavigation'
-import { landmarks } from '../data/landmarks'
 
 const navigationItems = [
   { key: 'home', label: { en: 'Home', mr: 'मुख्यपृष्ठ' }, icon: Home, path: '/' },
@@ -31,7 +30,7 @@ const categoryOptions = [
 ]
 
 export default function Sidebar() {
-  const { menuOpen, setMenuOpen, language, darkMode, setSelectedLandmark, setSelectedCategory, setToast, enabledCategories, setEnabledCategories } = useNavigation()
+  const { menuOpen, setMenuOpen, language, darkMode, setSelectedLandmark, setSelectedCategory, setToast, enabledCategories, setEnabledCategories, landmarks } = useNavigation()
 
   const focusCategory = (category) => {
     const match = landmarks.find((item) => item.category === category)

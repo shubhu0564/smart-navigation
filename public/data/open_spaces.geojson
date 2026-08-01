@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kishore Kumar Bagh",
+        "category": "Park"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [72.8250, 19.1078],
+            [72.8256, 19.1078],
+            [72.8256, 19.1084],
+            [72.8250, 19.1084],
+            [72.8250, 19.1078]
+          ]
+        ]
+      }
+    }
+  ]
+}

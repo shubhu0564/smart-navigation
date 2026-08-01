@@ -5,7 +5,7 @@ import { useNavigation } from '../hooks/useNavigation'
 const items = [
   { label: 'Home', path: '/' },
   { label: 'Landmarks', path: '/navigation' },
-  { label: 'Roads', path: '/nearby' },
+  { label: 'Roads', path: '/navigation' },
   { label: 'Parks', path: '/navigation' },
   { label: 'Schools', path: '/navigation' },
   { label: 'Educational Institutes', path: '/navigation' },
@@ -15,7 +15,6 @@ const items = [
   { label: 'Temples', path: '/navigation' },
   { label: 'Bus Stops', path: '/navigation' },
   { label: 'Public Toilets', path: '/navigation' },
-  { label: 'About', path: '/about' },
 ]
 
 export default function SimpleSidebar() {

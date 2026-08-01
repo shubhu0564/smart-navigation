@@ -1,12 +1,11 @@
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, MapPin, Star, Route } from 'lucide-react'
 import { useNavigation } from '../hooks/useNavigation'
-import { landmarks } from '../data/landmarks'
 import { getText, formatDistance } from '../utils/helpers'
 
 export default function LandmarkPage() {
   const { id } = useParams()
-  const { language, darkMode, setSelectedLandmark } = useNavigation()
+  const { language, darkMode, setSelectedLandmark, landmarks } = useNavigation()
   const item = landmarks.find((entry) => entry.id === Number(id)) || landmarks[0]
 
   return (

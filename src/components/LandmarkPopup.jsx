@@ -8,7 +8,6 @@ export default function LandmarkPopup({ landmark, onNavigate }) {
         </div>
         <span className="rounded-full bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-700">{landmark.category}</span>
       </div>
-      <p className="text-xs text-slate-600">{landmark.description}</p>
       <img src={landmark.image} alt={landmark.name} className="h-24 w-full rounded-xl object-cover" />
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => onNavigate(landmark)} className="rounded-full bg-teal-600 px-3 py-2 text-xs font-semibold text-white">Navigate</button>
