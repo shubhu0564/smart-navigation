@@ -18,7 +18,7 @@ export default function Footer() {
               GASWG
             </h3>
 
-            <p className="mt-2 text-base text-slate-700 leading-6">
+            <p className="mt-2 text-base leading-6 text-slate-700">
               Gulmohar Area Societies
               <br />
               Welfare Group
@@ -37,7 +37,7 @@ export default function Footer() {
               Gulmohar ALM-67
             </h3>
 
-            <p className="mt-2 text-base text-slate-700 leading-6">
+            <p className="mt-2 text-base leading-6 text-slate-700">
               Strong Community
               <br />
               Better Neighbourhood
@@ -66,20 +66,29 @@ export default function Footer() {
         {/* Divider */}
         <div className="my-8 border-t border-slate-300"></div>
 
-        {/* Footer Information */}
-        <div className="space-y-2 text-center">
-          <p className="text-lg font-medium text-slate-700">
-            © Design by
-Sapthakalaa 
-          </p>
+        {/* Footer Credits */}
+        <div className="flex flex-col items-center justify-between gap-4 text-sm text-slate-700 md:flex-row">
 
-          <p className="text-base text-slate-600">
-        
-          </p>
+          {/* Left Side */}
+          <div className="text-center md:text-left">
+            <span className="font-medium">
+              © Design by{" "}
+            </span>
+            <span className="font-semibold text-slate-900">
+              Sapthakalaa Environmental Design, Planning and Management
+            </span>
+          </div>
 
-          <p className="font-semibold text-slate-800">
-            Developed by <span className="text-teal-700">Shubham Shinde</span>
-          </p>
+          {/* Right Side */}
+          <div className="text-center md:text-right">
+            <span className="font-medium">
+              Developed by{" "}
+            </span>
+            <span className="font-semibold text-teal-700">
+              Shubham Shinde
+            </span>
+          </div>
+
         </div>
 
       </div>
