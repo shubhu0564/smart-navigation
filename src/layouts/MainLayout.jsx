@@ -17,21 +17,6 @@ export default function MainLayout() {
       <Navbar />
       <SimpleSidebar />
       <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-8 pt-4 sm:px-6 lg:px-8">
-        <motion.header
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`mb-6 rounded-[28px] border px-4 py-3 shadow-sm backdrop-blur ${darkMode ? 'border-slate-800 bg-slate-900/80' : 'border-white/70 bg-white/80'}`}
-        >
-          <div className="min-w-0">
-            <h1 className="text-3xl font-bold leading-tight tracking-[0.01em] text-teal-600 sm:text-4xl">
-              INFORMATION BOARD
-            </h1>
-            <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-300 sm:text-base">
-              K/West Ward – 67, Brihanmumbai Municipal Corporation
-            </p>
-          </div>
-        </motion.header>
-
         <Outlet />
       </main>
       <Footer />

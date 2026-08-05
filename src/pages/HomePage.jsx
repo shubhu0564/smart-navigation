@@ -1,9 +1,7 @@
 import { motion } from 'framer-motion'
-import { Info } from 'lucide-react'
 import SearchBar from '../components/SearchBar'
 import MapContainer from '../components/MapContainer'
 import CategoryGrid from '../components/CategoryGrid'
-import PublicRepresentatives from '../components/PublicRepresentatives'
 import { useNavigation } from '../hooks/useNavigation'
 import { getText } from '../utils/helpers'
 
@@ -35,31 +33,6 @@ export default function HomePage() {
           <CategoryGrid />
         </div>
         <MapContainer />
-        <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
-                <span className="text-xl font-semibold">i</span>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-teal-600">{getText({ en: 'Information Board', mr: 'माहिती बोर्ड' }, language)}</p>
-                <h2 className="text-xl font-semibold text-slate-900">Gulmohar JVPD Scheme, K/West Ward - 67</h2>
-              </div>
-            </div>
-          </div>
-          <div className="mt-5 space-y-4 text-sm leading-7 text-slate-700">
-            <p>
-              In 1950, the Government of Bombay acquired over 220 acres along the Irla Nullah to develop a planned residential neighbourhood. The project was executed by the Bombay Housing Board (BHB), later known as MHADA, making it one of Mumbai&apos;s earliest planned housing developments.
-            </p>
-            <p>
-              The master plan created two distinct precincts: JVPD with low-density bungalow plots, and Gulmohar Road with apartments for middle-income families.
-            </p>
-            <p>
-              Since becoming part of MHADA in 1977, the area has remained a landmark of Mumbai&apos;s planned urban development.
-            </p>
-          </div>
-          <div className="mt-6 border-t border-slate-200 pt-4 text-sm text-slate-500"> </div>
-        </section>
       </section>
     </div>
   )
