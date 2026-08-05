@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
-import { FaBuilding, FaChurch, FaLandmark, FaMapMarkedAlt, FaSchool, FaTree } from 'react-icons/fa'
+import { FaBuilding, FaChurch, FaLandmark, FaMapMarkedAlt, FaSchool, FaTree, FaHospital } from 'react-icons/fa'
+import { getCategoryLabel } from '../utils/helpers'
 import { highlightText } from '../utils/searchUtils'
 
 const iconMap = {
@@ -8,10 +9,11 @@ const iconMap = {
   Government: FaBuilding,
   Community: FaLandmark,
   Temple: FaChurch,
+  'Hospitals / Medical': FaHospital,
   default: FaMapMarkedAlt,
 }
 
-export default function SearchResultCard({ item, query, isActive, onSelect }) {
+export default function SearchResultCard({ item, query, isActive, onSelect, language }) {
   const Icon = iconMap[item.category] ?? iconMap.default
   const segments = highlightText(item.name, query)
 

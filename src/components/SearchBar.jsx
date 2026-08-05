@@ -55,6 +55,7 @@ export default function SearchBar() {
             onSelect={selectSuggestion}
             emptyMessage={getText({ en: 'No matching locations found.', mr: 'कुणतीही जुळणारी स्थळे सापडली नाहीत.' }, language)}
             isVisible={showSuggestions}
+            language={language}
           />
         </div>
         <button type="button" onClick={() => setToast({ en: 'Voice search is ready', mr: 'व्हॉइस शोध तयार आहे' })} className="rounded-2xl bg-teal-600 p-3 text-white shadow-sm">

@@ -4,7 +4,15 @@ import { useNavigation } from '../hooks/useNavigation'
 import { getText } from '../utils/helpers'
 
 export default function CategoryGrid() {
-  const { language, selectedCategory, setSelectedCategory, darkMode, categories } = useNavigation()
+  const { language, selectedCategory, setSelectedCategory, darkMode, categories, landmarks, setSelectedLandmark } = useNavigation()
+
+  const handleCategoryClick = (categoryId) => {
+    setSelectedCategory(categoryId)
+    if (categoryId !== 'all') {
+      const firstMatch = landmarks.find((item) => item.category === categoryId)
+      if (firstMatch) setSelectedLandmark(firstMatch)
+    }
+  }
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
@@ -16,7 +24,7 @@ export default function CategoryGrid() {
             whileHover={{ y: -3, scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             key={category.id}
-            onClick={() => setSelectedCategory(category.id)}
+            onClick={() => handleCategoryClick(category.id)}
             className={`rounded-[24px] border p-4 text-left shadow-sm transition duration-200 ${active ? 'border-teal-600 bg-teal-600 text-white shadow-lg' : darkMode ? 'border-slate-800 bg-slate-900/60 text-slate-200 hover:border-slate-500 hover:bg-slate-900' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'}`}
           >
             <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-2xl ${active ? 'bg-white/20 text-white' : 'bg-teal-600/10 text-teal-600'}`}>

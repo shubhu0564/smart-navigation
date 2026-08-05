@@ -6,25 +6,38 @@ import { categories as fallbackCategories } from '../data/landmarks'
 
 const categoryMeta = {
   all: { label: { en: 'All Places', mr: 'सर्व स्थळे' }, icon: 'Compass' },
+  'Hospitals / Medical': { label: { en: 'Hospitals / Medical', mr: 'रुग्णालये / वैद्यकीय' }, icon: 'HeartPulse' },
   Park: { label: { en: 'Parks', mr: 'बागा' }, icon: 'Trees' },
-  School: { label: { en: 'Schools', mr: 'शाळा' }, icon: 'School' },
   Institute: { label: { en: 'Educational Institutes', mr: 'शैक्षणिक संस्था' }, icon: 'Building2' },
-  Government: { label: { en: 'Government Offices', mr: 'सरकारी कार्यालये' }, icon: 'Building2' },
   Community: { label: { en: 'Community Centres', mr: 'समुदाय केंद्रे' }, icon: 'Landmark' },
-  Temple: { label: { en: 'Temples', mr: 'मंदिर' }, icon: 'Church' },
-  Club: { label: { en: 'Clubs', mr: 'क्लब' }, icon: 'Users' },
   'Bus Stop': { label: { en: 'Bus Stops', mr: 'बस थांबे' }, icon: 'Bus' },
   'Public Toilet': { label: { en: 'Public Toilets', mr: 'सार्वजनिक शौचालये' }, icon: 'Toilet' },
+  Temple: { label: { en: 'Temples', mr: 'मंदिर' }, icon: 'Church' },
+  Government: { label: { en: 'Government Buildings', mr: 'सरकारी इमारती' }, icon: 'Building2' },
+  School: { label: { en: 'Schools', mr: 'शाळा' }, icon: 'School' },
   'Research Institute': { label: { en: 'Research Institutes', mr: 'संशोधन संस्था' }, icon: 'Building2' },
+  Club: { label: { en: 'Clubs', mr: 'क्लब' }, icon: 'Users' },
 }
 
-const categoryOrder = ['all', 'Park', 'School', 'Institute', 'Government', 'Community', 'Temple', 'Club', 'Bus Stop', 'Public Toilet', 'Research Institute']
+const categoryOrder = [
+  'all',
+  'Hospitals / Medical',
+  'Park',
+  'Institute',
+  'Community',
+  'Bus Stop',
+  'Public Toilet',
+  'Temple',
+  'Government',
+]
+
+const desiredCategories = categoryOrder.filter((id) => id !== 'all')
 
 export function NavigationProvider({ children }) {
   const [language, setLanguage] = useState('en')
   const [darkMode, setDarkMode] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [enabledCategories, setEnabledCategories] = useState(() => fallbackCategories.filter((category) => category.id !== 'all').map((category) => category.id))
+  const [enabledCategories, setEnabledCategories] = useState(() => desiredCategories)
   const [selectedLandmark, setSelectedLandmark] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [userLocation, setUserLocation] = useState({ lat: 19.105, lng: 72.824 })
@@ -46,14 +59,7 @@ export function NavigationProvider({ children }) {
   }, [geoJson.landmarks])
 
   const categories = useMemo(() => {
-    const uniqueIds = Array.from(
-      new Set(geoJson.landmarks?.features?.map((feature) => feature?.properties?.category).filter(Boolean) ?? []),
-    )
-
-    const ordered = [
-      ...categoryOrder,
-      ...uniqueIds.filter((id) => !categoryOrder.includes(id)),
-    ]
+    const ordered = ['all', ...desiredCategories]
 
     return ordered.map((id) => {
       const meta = categoryMeta[id] || { label: { en: id, mr: id }, icon: 'MapPin' }

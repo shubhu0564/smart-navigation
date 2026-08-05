@@ -9,6 +9,7 @@ import { useLiveLocation } from '../hooks/useLiveLocation'
 import { getText } from '../utils/helpers'
 import FloatingActionBar from './FloatingActionBar'
 import GeoJsonLayer from './GeoJsonLayer'
+import LandmarkPopup from './LandmarkPopup'
 import { filterLandmarksGeoJson } from '../utils/geoJsonUtils'
 
 export default function MapContainer() {
@@ -188,7 +189,8 @@ export default function MapContainer() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-xl">
+    <>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-xl">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <div>
           <p className="text-sm font-semibold text-teal-600">{getText({ en: 'Live GIS map', mr: 'थेट GIS नकाशा' }, language)}</p>
@@ -271,5 +273,19 @@ export default function MapContainer() {
         </span>
       </div>
     </motion.div>
+      {selectedLandmark && (
+        <LandmarkPopup
+          landmark={selectedLandmark}
+          onNavigate={() => {
+            if (position) {
+              setToast({ en: 'Starting navigation...', mr: 'मार्गदर्शन सुरू होते आहे...' })
+            }
+            focusOnSelected()
+          }}
+          onViewMap={focusOnSelected}
+          onClose={() => setSelectedLandmark(null)}
+        />
+      )}
+    </>
   )
 }

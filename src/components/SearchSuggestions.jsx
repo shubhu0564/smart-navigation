@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import SearchResultCard from './SearchResultCard'
 
-export default function SearchSuggestions({ suggestions, query, activeIndex, onSelect, emptyMessage, isVisible }) {
+export default function SearchSuggestions({ suggestions, query, activeIndex, onSelect, emptyMessage, isVisible, language }) {
   return (
     <AnimatePresence>
       {isVisible && (
@@ -17,7 +17,7 @@ export default function SearchSuggestions({ suggestions, query, activeIndex, onS
             ) : (
               <div className="space-y-2">
                 {suggestions.map((item, index) => (
-                  <SearchResultCard key={item.id} item={item} query={query} isActive={index === activeIndex} onSelect={onSelect} />
+                  <SearchResultCard key={item.id} item={item} query={query} isActive={index === activeIndex} onSelect={onSelect} language={language} />
                 ))}
               </div>
             )}
