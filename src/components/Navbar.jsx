@@ -24,13 +24,14 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <label htmlFor="language-select" className="sr-only">Language</label>
           <select
             id="language-select"
             value={language}
             onChange={(event) => setLanguage(event.target.value)}
-            className="h-12 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm outline-none transition hover:border-slate-300"
+            className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 shadow-sm outline-none transition hover:border-slate-300 sm:text-sm"
+            style={{ height: '38px' }}
           >
             <option value="en">English</option>
             <option value="mr">Marathi</option>
@@ -38,13 +39,14 @@ export default function Navbar() {
           <a
             href="https://sapthakalaa.co.in"
             target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white p-2 shadow-sm transition hover:scale-[1.02]"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white shadow-sm transition hover:shadow-md"
+            style={{ height: '40px', width: '40px', cursor: 'pointer' }}
           >
             <img
-              src="/LOGO DESIGN for print_png.png"
+              src="/image.png"
               alt="Sapthakalaa logo"
-              className="h-full w-full object-contain"
+              className="h-full w-full rounded-full object-cover"
             />
           </a>
         </div>

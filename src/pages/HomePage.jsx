@@ -34,6 +34,37 @@ export default function HomePage() {
         </div>
         <MapContainer />
       </section>
+
+      <section className="border-t border-slate-200 bg-white pt-8">
+        <div className="mb-8 text-center">
+          <h2 className="text-xl font-semibold uppercase tracking-[0.25em] text-slate-800 sm:text-2xl">GUIDED BY</h2>
+        </div>
+
+        <div className="grid gap-12 px-4 md:grid-cols-2">
+          <div className="flex flex-col items-center text-center">
+            <img
+              src="/ameet-satam.jpg"
+              alt="Shri Ameet Satam Ji"
+              className="h-40 w-40 rounded-full border-4 border-white object-cover object-center shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+            />
+            <h3 className="mt-5 text-lg font-bold text-slate-900">Shri Ameet Satam Ji</h3>
+            <p className="mt-2 text-sm font-medium text-slate-700">Hon&apos;ble MLA</p>
+            <p className="mt-1 text-sm text-slate-600">BJP Mumbai President</p>
+          </div>
+
+          <div className="flex flex-col items-center text-center">
+            <img
+              src="/deepak-kotekar.jpg"
+              alt="Shri Deepak Kotekar Ji"
+              className="h-40 w-40 rounded-full border-4 border-white object-cover object-center shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+            />
+            <h3 className="mt-5 text-lg font-bold text-slate-900">Shri Deepak Kotekar Ji</h3>
+            <p className="mt-2 text-sm font-medium text-slate-700">Hon&apos;ble Corporator</p>
+          </div>
+        </div>
+
+        <div className="mt-8 border-t border-slate-200"></div>
+      </section>
     </div>
   )
 }
