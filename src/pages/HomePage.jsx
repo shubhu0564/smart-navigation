@@ -37,17 +37,19 @@ export default function HomePage() {
 
       <section className="border-t border-slate-200 bg-white py-12">
         <div className="mx-auto max-w-5xl px-4 space-y-12">
-          <div className="space-y-6 text-center">
+          <div className="space-y-5 text-center">
             <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">GUIDED BY</h2>
-            <img
-              src="/ameet-satam.jpg"
-              alt="Shri Ameet Satam Ji"
-              className="mx-auto h-[220px] w-[220px] rounded-[16px] object-cover shadow-[0_18px_50px_rgba(15,23,42,0.08)]"
-            />
+            <div className="mx-auto h-[180px] w-[180px] overflow-hidden rounded-[16px] shadow-[0_18px_50px_rgba(15,23,42,0.08)] sm:h-[220px] sm:w-[220px]">
+              <img
+                src="/ameet-satam.jpg"
+                alt="Shri. Ameet Satam Ji"
+                className="h-full w-full object-cover object-[center_top]"
+              />
+            </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Shri Ameet Satam Ji</h3>
-              <p className="text-lg font-semibold text-slate-700">Hon&apos;ble MLA</p>
-              <p className="text-lg text-slate-700">President, Mumbai BJP</p>
+              <h3 className="text-[28px] font-semibold leading-tight text-slate-900 sm:text-[34px]">Shri. Ameet Satam Ji</h3>
+              <p className="text-[18px] font-medium leading-tight text-slate-700 sm:text-[22px]">Hon&apos;ble MLA &</p>
+              <p className="text-[18px] leading-tight text-slate-700 sm:text-[22px]">President of Mumbai BJP</p>
             </div>
           </div>
 
@@ -55,16 +57,16 @@ export default function HomePage() {
 
           <div className="space-y-6 text-center">
             <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">PROJECT INITIATED BY</h2>
-            <div className="mx-auto h-[220px] w-[220px] overflow-hidden rounded-[16px] shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+            <div className="mx-auto h-[180px] w-[180px] overflow-hidden rounded-[16px] shadow-[0_18px_50px_rgba(15,23,42,0.08)] sm:h-[220px] sm:w-[220px]">
               <img
                 src="/deepak-kotekar.jpg"
-                alt="Shri Deepak Kotekar Ji"
-                className="h-full w-full object-cover object-[center_15%]"
+                alt="Shri. Deepak Kotekar Ji"
+                className="h-full w-full object-cover object-[center_12%]"
               />
             </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Shri Deepak Kotekar Ji</h3>
-              <p className="text-lg font-semibold text-slate-700">Hon&apos;ble Corporator</p>
+              <h3 className="text-[28px] font-semibold leading-tight text-slate-900 sm:text-[34px]">Shri. Deepak Kotekar Ji</h3>
+              <p className="text-[18px] font-medium leading-tight text-slate-700 sm:text-[22px]">Hon&apos;ble Corporator</p>
             </div>
           </div>
 
@@ -72,26 +74,26 @@ export default function HomePage() {
 
           <div className="space-y-6 text-center">
             <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">SUPPORTED BY</h2>
-            <div className="grid gap-8 sm:grid-cols-2">
-              <div className="flex flex-col items-center text-center gap-4">
+            <div className="grid grid-cols-2 gap-4 sm:gap-8">
+              <div className="flex flex-col items-center text-center gap-3 px-2">
                 <img
                   src="/gulmohar%20logo_png.png"
                   alt="GASWG Logo"
-                  className="h-24 w-24 object-contain transition duration-200 hover:scale-105"
+                  className="h-[80px] w-[80px] object-contain transition duration-200 hover:scale-105 sm:h-24 sm:w-24"
                 />
                 <div className="space-y-2">
-                  <h3 className="text-xl font-semibold text-slate-900">GASWG</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">GASWG</h3>
                   <p className="text-sm leading-6 text-slate-700">Gulmohar Area Societies Welfare Group</p>
                 </div>
               </div>
-              <div className="flex flex-col items-center text-center gap-4">
+              <div className="flex flex-col items-center text-center gap-3 px-2">
                 <img
                   src="/ALM.jpeg"
                   alt="Gulmohar ALM-67"
-                  className="h-24 w-24 object-contain transition duration-200 hover:scale-105"
+                  className="h-[80px] w-[80px] object-contain transition duration-200 hover:scale-105 sm:h-24 sm:w-24"
                 />
                 <div className="space-y-2">
-                  <h3 className="text-xl font-semibold text-slate-900">Gulmohar ALM-67</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">Gulmohar ALM-67</h3>
                   <p className="text-sm leading-6 text-slate-700">Strong Community, Better Neighbourhood</p>
                 </div>
               </div>
@@ -115,11 +117,14 @@ export default function HomePage() {
               />
             </a>
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-slate-900">
-                Sapthakalaa Environmental Design,
+              <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">
+                Sapthakalaa
+              </h3>
+              <p className="text-[18px] leading-[1.6] text-slate-700 sm:text-[16px]">
+                Environmental Design,
                 <br />
                 Planning and Management
-              </h3>
+              </p>
             </div>
           </div>
         </div>
