@@ -24,14 +24,13 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <label htmlFor="language-select" className="sr-only">Language</label>
           <select
             id="language-select"
             value={language}
             onChange={(event) => setLanguage(event.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 shadow-sm outline-none transition hover:border-slate-300 sm:text-sm"
-            style={{ height: '38px' }}
+            className="h-[36px] min-w-[108px] rounded-full border border-slate-200 bg-white px-3 text-[14px] font-medium text-slate-700 shadow-sm outline-none transition hover:border-slate-300"
           >
             <option value="en">English</option>
             <option value="mr">Marathi</option>
@@ -40,13 +39,12 @@ export default function Navbar() {
             href="https://sapthakalaa.co.in"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white shadow-sm transition hover:shadow-md"
-            style={{ height: '40px', width: '40px', cursor: 'pointer' }}
+            className="inline-flex h-[50px] w-[50px] items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition hover:shadow-md sm:h-[56px] sm:w-[56px] md:h-[64px] md:w-[64px] cursor-pointer"
           >
             <img
-              src="/image.png"
+              src="/images/guided-by/image.png"
               alt="Sapthakalaa logo"
-              className="h-full w-full rounded-full object-cover"
+              className="h-[80%] w-[80%] object-contain"
             />
           </a>
         </div>

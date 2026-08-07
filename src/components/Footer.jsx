@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
 
         {/* Organization Logos */}
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
 
           {/* GASWG */}
           <div className="flex flex-col items-center text-center">
@@ -45,7 +45,7 @@ export default function Footer() {
           </div>
 
           {/* Sapthakalaa */}
-          <div className="flex flex-col items-center text-center">
+          <div className="col-span-2 flex flex-col items-center text-center gap-6 sm:col-span-1">
             <img
               src="/LOGO%20DESIGN%20for%20print_png.png"
               alt="Sapthakalaa EDPM"
@@ -57,7 +57,7 @@ export default function Footer() {
             </h3>
 
             <p className="mt-2 text-base text-slate-700">
-              Sapthakalaa EDPM
+              Sapthakalaa Environmental Design, Planning and Management
             </p>
           </div>
 
