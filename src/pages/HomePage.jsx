@@ -35,38 +35,91 @@ export default function HomePage() {
         <MapContainer />
       </section>
 
-      <section className="border-t border-slate-200 bg-white pt-8">
-        <div className="px-4">
-          <div className="mb-10 text-center">
+      <section className="border-t border-slate-200 bg-white py-12">
+        <div className="mx-auto max-w-5xl px-4 space-y-12">
+          <div className="space-y-6 text-center">
             <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">GUIDED BY</h2>
+            <img
+              src="/ameet-satam.jpg"
+              alt="Shri Ameet Satam Ji"
+              className="mx-auto h-[220px] w-[220px] rounded-[16px] object-cover shadow-[0_18px_50px_rgba(15,23,42,0.08)]"
+            />
+            <div className="space-y-2">
+              <h3 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Shri Ameet Satam Ji</h3>
+              <p className="text-lg font-semibold text-slate-700">Hon&apos;ble MLA</p>
+              <p className="text-lg text-slate-700">President, Mumbai BJP</p>
+            </div>
           </div>
 
-          <div className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-6 px-2">
-            <div className="flex h-full min-h-[420px] flex-col items-center justify-start text-center sm:min-h-[560px]">
-              <img
-                src="/ameet-satam.jpg"
-                alt="Shri Ameet Satam Ji"
-                className="h-[120px] w-[120px] rounded-[12px] bg-white object-cover object-top sm:h-[220px] sm:w-[220px]"
-              />
-              <div className="mt-6 space-y-2 sm:mt-7 sm:space-y-3">
-                <p className="text-[12px] font-semibold uppercase tracking-[0.24em] text-slate-700 sm:text-[16px]">GUIDED BY</p>
-                <h3 className="text-[18px] font-bold leading-tight text-slate-900 sm:text-[28px]">Shri Ameet Satam Ji</h3>
-                <p className="text-[14px] font-semibold text-slate-700 sm:text-[18px]">Hon&apos;ble MLA</p>
-                <p className="text-[13px] text-slate-700 sm:text-[16px]">BJP Mumbai President</p>
-              </div>
-            </div>
+          <div className="border-t border-slate-200"></div>
 
-            <div className="flex h-full min-h-[420px] flex-col items-center justify-start text-center sm:min-h-[560px]">
+          <div className="space-y-6 text-center">
+            <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">PROJECT INITIATED BY</h2>
+            <div className="mx-auto h-[220px] w-[220px] overflow-hidden rounded-[16px] shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
               <img
                 src="/deepak-kotekar.jpg"
                 alt="Shri Deepak Kotekar Ji"
-                className="h-[120px] w-[120px] rounded-[12px] bg-white object-cover object-center sm:h-[220px] sm:w-[220px]"
+                className="h-full w-full object-cover object-[center_15%]"
               />
-              <div className="mt-6 space-y-2 sm:mt-7 sm:space-y-3">
-                <p className="text-[12px] font-semibold uppercase tracking-[0.24em] text-slate-700 sm:text-[16px]">PROJECT INITIATED BY</p>
-                <h3 className="text-[18px] font-bold leading-tight text-slate-900 sm:text-[28px]">Shri Deepak Kotekar Ji</h3>
-                <p className="text-[14px] font-semibold text-slate-700 sm:text-[18px]">Hon&apos;ble Corporator</p>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Shri Deepak Kotekar Ji</h3>
+              <p className="text-lg font-semibold text-slate-700">Hon&apos;ble Corporator</p>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-200"></div>
+
+          <div className="space-y-6 text-center">
+            <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">SUPPORTED BY</h2>
+            <div className="grid gap-8 sm:grid-cols-2">
+              <div className="flex flex-col items-center text-center gap-4">
+                <img
+                  src="/gulmohar%20logo_png.png"
+                  alt="GASWG Logo"
+                  className="h-24 w-24 object-contain transition duration-200 hover:scale-105"
+                />
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold text-slate-900">GASWG</h3>
+                  <p className="text-sm leading-6 text-slate-700">Gulmohar Area Societies Welfare Group</p>
+                </div>
               </div>
+              <div className="flex flex-col items-center text-center gap-4">
+                <img
+                  src="/ALM.jpeg"
+                  alt="Gulmohar ALM-67"
+                  className="h-24 w-24 object-contain transition duration-200 hover:scale-105"
+                />
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold text-slate-900">Gulmohar ALM-67</h3>
+                  <p className="text-sm leading-6 text-slate-700">Strong Community, Better Neighbourhood</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-200"></div>
+
+          <div className="space-y-6 text-center">
+            <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">DESIGNED BY</h2>
+            <a
+              href="https://sapthakalaa.co.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mx-auto flex h-[120px] w-[120px] items-center justify-center rounded-full bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]"
+            >
+              <img
+                src="/LOGO%20DESIGN%20for%20print_png.png"
+                alt="Sapthakalaa Environmental Design, Planning and Management"
+                className="h-32 w-auto object-contain"
+              />
+            </a>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold text-slate-900">
+                Sapthakalaa Environmental Design,
+                <br />
+                Planning and Management
+              </h3>
             </div>
           </div>
         </div>

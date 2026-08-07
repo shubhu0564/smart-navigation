@@ -39,12 +39,12 @@ export default function Navbar() {
             href="https://sapthakalaa.co.in"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-[50px] w-[50px] items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition hover:shadow-md sm:h-[56px] sm:w-[56px] md:h-[64px] md:w-[64px] cursor-pointer"
+            className="inline-flex h-[48px] w-[48px] items-center justify-center rounded-full border border-slate-200 bg-white p-2 shadow-sm transition duration-200 hover:scale-105 hover:shadow-md sm:h-[56px] sm:w-[56px] cursor-pointer"
           >
             <img
               src="/images/guided-by/image.png"
               alt="Sapthakalaa logo"
-              className="h-[80%] w-[80%] object-contain"
+              className="h-full w-full object-contain object-center"
             />
           </a>
         </div>
