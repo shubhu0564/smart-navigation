@@ -5,22 +5,25 @@ import L from 'leaflet'
 const styles = {
   siteBoundary: {
     color: '#ef4444',
-    weight: 3,
+    weight: 4,
     opacity: 1,
     fillOpacity: 0,
   },
+
   roads: {
     color: '#6b7280',
-    weight: 3,
+    weight: 2,
     opacity: 0.9,
   },
+
   buildings: {
     color: '#111827',
-    weight: 1,
+    weight: 1.5,
     opacity: 1,
-    fillColor: '#ffffff',
-    fillOpacity: 0.9,
+    fillColor: '#8b5cf6',
+    fillOpacity: 0.65,
   },
+
   openSpaces: {
     color: '#16a34a',
     weight: 1,
@@ -43,57 +46,243 @@ const categoryIconMap = {
   'Public Toilet': '🚻',
 }
 
-export default function GeoJsonLayer({ featureData, layerKey, onFeatureClick, activeFeatureId }) {
+const getSafeString = (value) => {
+  if (value === null || value === undefined) {
+    return 'Not assigned'
+  }
+
+  const valueString = String(value).trim()
+
+  return valueString.length > 0
+    ? valueString
+    : 'Not assigned'
+}
+
+export default function GeoJsonLayer({
+  featureData,
+  layerKey,
+  onFeatureClick,
+  activeFeatureId,
+}) {
   const style = styles[layerKey] || {}
 
   const renderPopupContent = (feature) => {
-    if (!feature?.properties) return ''
-    const { name, road, category, description } = feature.properties
+    if (!feature?.properties) {
+      return ''
+    }
+
+    // BUILDING POPUP
+    if (layerKey === 'buildings') {
+      const buildingNo = getSafeString(
+        feature.properties.bldg_no
+      )
+
+      const buildingName = getSafeString(
+        feature.properties.bldg_namee
+      )
+
+      return `
+        <div style="
+          font-family: system-ui, sans-serif;
+          line-height: 1.5;
+          color: #0f172a;
+          min-width: 180px;
+        ">
+          <div style="
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 8px;
+          ">
+            Building Details
+          </div>
+
+          <div style="
+            font-size: 13px;
+            margin-bottom: 4px;
+          ">
+            <strong>Building No:</strong> ${buildingNo}
+          </div>
+
+          <div style="
+            font-size: 13px;
+          ">
+            <strong>Building Name:</strong> ${buildingName}
+          </div>
+        </div>
+      `
+    }
+
+    // OTHER FEATURE POPUP
+    const {
+      name,
+      road,
+      category,
+      description,
+    } = feature.properties
+
     return `
-      <div style="font-family:system-ui, sans-serif; line-height:1.4;">
-        <strong style="display:block; margin-bottom:6px;">${name}</strong>
-        <div style="font-size:13px; color:#334155; margin-bottom:4px;">${road || category || ''}</div>
-        <div style="font-size:13px; color:#475569;">${description || ''}</div>
+      <div style="
+        font-family: system-ui, sans-serif;
+        line-height: 1.4;
+      ">
+        <strong style="
+          display: block;
+          margin-bottom: 6px;
+        ">
+          ${name || 'Feature'}
+        </strong>
+
+        <div style="
+          font-size: 13px;
+          color: #334155;
+          margin-bottom: 4px;
+        ">
+          ${road || category || ''}
+        </div>
+
+        <div style="
+          font-size: 13px;
+          color: #475569;
+        ">
+          ${description || ''}
+        </div>
       </div>
     `
   }
 
   const getFeatureId = (feature) => {
-    const coordId = feature?.geometry?.coordinates?.flat?.()?.join?.(',')
-    return feature?.properties?.id ?? coordId ?? ''
+    return (
+      feature?.properties?.id ??
+      feature?.properties?.bldg_no ??
+      ''
+    )
   }
 
+  // Point features
   const pointToLayer = (feature, latlng) => {
-    if (layerKey !== 'landmarks') return L.circleMarker(latlng, { radius: 6, color: '#0f766e', fillOpacity: 1, fillColor: '#0f766e' })
+    if (layerKey !== 'landmarks') {
+      return L.circleMarker(latlng, {
+        radius: 6,
+        color: '#0f766e',
+        fillColor: '#0f766e',
+        fillOpacity: 1,
+      })
+    }
 
-    const category = feature?.properties?.category || 'Landmark'
-    const iconText = categoryIconMap[category] ?? '📍'
-    const active = activeFeatureId === getFeatureId(feature)
+    const category =
+      feature?.properties?.category || 'Landmark'
+
+    const iconText =
+      categoryIconMap[category] ?? '📍'
+
+    const active =
+      activeFeatureId === getFeatureId(feature)
+
+    const size = active ? 40 : 32
+
     const icon = L.divIcon({
       className: 'custom-geojson-marker',
-      html: `<div style="display:flex;align-items:center;justify-content:center;border-radius:999px;width:${active ? 40 : 32}px;height:${active ? 40 : 32}px;background:#0f766e;color:white;font-size:${active ? 16 : 14}px;border:2px solid white;box-shadow:0 10px 24px rgba(15,23,42,0.18)">${iconText}</div>`,
-      iconSize: [active ? 40 : 32, active ? 40 : 32],
-      iconAnchor: [active ? 20 : 16, active ? 20 : 16],
+
+      html: `
+        <div style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          width: ${size}px;
+          height: ${size}px;
+          background: #0f766e;
+          color: white;
+          font-size: ${active ? 16 : 14}px;
+          border: 2px solid white;
+          box-shadow: 0 10px 24px rgba(15,23,42,0.18);
+        ">
+          ${iconText}
+        </div>
+      `,
+
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
     })
-    return L.marker(latlng, { icon })
+
+    return L.marker(latlng, {
+      icon,
+    })
   }
 
+  // Feature events
   const onEachFeature = (feature, layer) => {
-    if (feature?.properties?.name) {
-      layer.bindPopup(renderPopupContent(feature), { maxWidth: 280, closeButton: true })
+    if (layerKey === 'buildings') {
+      layer.bindPopup(
+        renderPopupContent(feature),
+        {
+          maxWidth: 300,
+          closeButton: true,
+        }
+      )
+    } else if (feature?.properties?.name) {
+      layer.bindPopup(
+        renderPopupContent(feature),
+        {
+          maxWidth: 300,
+          closeButton: true,
+        }
+      )
     }
+
     layer.on({
       click: () => {
         layer.openPopup?.()
         onFeatureClick?.(feature)
       },
+
+      mouseover: () => {
+        if (layerKey === 'buildings') {
+          layer.setStyle({
+            color: '#f97316',
+            weight: 3,
+            fillColor: '#a78bfa',
+            fillOpacity: 0.85,
+          })
+
+          layer.bringToFront()
+        }
+      },
+
+      mouseout: () => {
+        if (layerKey === 'buildings') {
+          layer.setStyle(style)
+        }
+      },
     })
   }
 
   const filteredData = useMemo(() => {
-    if (!featureData) return null
+    if (!featureData) {
+      return null
+    }
+
     return featureData
   }, [featureData])
 
-  return filteredData ? <GeoJSON key={layerKey} data={filteredData} style={style} pointToLayer={pointToLayer} onEachFeature={onEachFeature} /> : null
+  if (!filteredData) {
+    return null
+  }
+
+  // ============================================
+  // TEMPORARILY HIDE LANDMARKS
+  // ============================================
+  if (layerKey === 'landmarks') {
+    return null
+  }
+
+  return (
+    <GeoJSON
+      key={`${layerKey}-${filteredData.features?.length || 0}`}
+      data={filteredData}
+      style={style}
+      pointToLayer={pointToLayer}
+      onEachFeature={onEachFeature}
+    />
+  )
 }

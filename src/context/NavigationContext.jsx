@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { NavigationContext } from './NavigationContext.js'
 import { useGeoJsonData } from '../hooks/useGeoJsonData'
 import { normalizeLandmarks } from '../utils/geoJsonUtils'
-import { categories as fallbackCategories } from '../data/landmarks'
 
 const categoryMeta = {
   all: { label: { en: 'All Places', mr: 'सर्व स्थळे' }, icon: 'Compass' },
