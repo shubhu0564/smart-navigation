@@ -6,47 +6,70 @@ export default function Navbar() {
   const { language, setLanguage } = useNavigation()
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur transition-colors duration-200 dark:border-slate-800 dark:bg-slate-950/95">
-      <div className="mx-auto flex flex-wrap items-center justify-between gap-4 px-3 py-4 sm:px-6 lg:px-8">
-        <Link to="/" className="flex min-w-0 items-center gap-3 sm:gap-4">
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+      <div className="mx-auto flex w-full items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-3 lg:px-8">
+
+        {/* BMC LOGO + TITLE */}
+        <Link
+          to="/"
+          className="flex min-w-0 items-center gap-2 sm:gap-3"
+        >
           <img
             src={emblem}
-            alt="Mumbai emblem logo"
-            className="h-14 w-14 rounded-full border border-slate-200 object-cover shadow-sm dark:border-slate-700"
+            alt="Brihanmumbai Municipal Corporation"
+            className="h-9 w-9 shrink-0 object-contain sm:h-12 sm:w-12"
           />
+
           <div className="min-w-0">
-            <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 sm:text-xl whitespace-nowrap navbar-title">
-              Brihanmumbai Municipal Corporation
+            <p className="text-[13px] font-semibold leading-tight tracking-tight text-slate-900 sm:text-xl dark:text-slate-100">
+              <span className="block sm:inline">
+                Brihanmumbai Municipal
+              </span>
+              <span className="block sm:inline sm:ml-1">
+                Corporation
+              </span>
             </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-base navbar-ward">
+
+            <p className="mt-1 text-[10px] leading-tight text-slate-500 sm:text-base dark:text-slate-400">
               K/West Ward – 67
             </p>
           </div>
         </Link>
 
-        <div className="flex w-full items-center justify-end gap-2 sm:w-auto sm:gap-3">
-          <label htmlFor="language-select" className="sr-only">Language</label>
+        {/* RIGHT SIDE */}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+
+          <label
+            htmlFor="language-select"
+            className="sr-only"
+          >
+            Language
+          </label>
+
           <select
             id="language-select"
             value={language}
             onChange={(event) => setLanguage(event.target.value)}
-            className="h-[36px] min-w-[88px] rounded-full border border-slate-200 bg-white px-3 text-[14px] font-medium text-slate-700 shadow-sm outline-none transition hover:border-slate-300 sm:min-w-[108px]"
+            className="h-8 min-w-[65px] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-medium text-slate-700 shadow-sm outline-none sm:h-9 sm:min-w-[90px] sm:px-3 sm:text-sm"
           >
             <option value="en">English</option>
             <option value="mr">Marathi</option>
           </select>
+
           <a
             href="https://sapthakalaa.co.in"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-[40px] w-[40px] items-center justify-center rounded-full border border-slate-200 bg-white p-2 shadow-sm transition duration-200 hover:scale-105 hover:shadow-md sm:h-[48px] sm:w-[48px] cursor-pointer"
+            aria-label="Sapthakalaa"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white p-1.5 shadow-sm sm:h-11 sm:w-11 sm:p-2"
           >
             <img
               src="/images/guided-by/image.png"
               alt="Sapthakalaa logo"
-              className="h-full w-full object-contain object-center"
+              className="h-full w-full object-contain"
             />
           </a>
+
         </div>
       </div>
     </header>
