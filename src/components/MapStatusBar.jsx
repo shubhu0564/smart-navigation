@@ -7,12 +7,12 @@ import { fetchGulmoharAreaStatus } from '../services/mapStatusService'
 
 function StatusTile({ label, value, icon: Icon, darkMode }) {
   return (
-    <div className={`rounded-[18px] border px-3 py-3 ${darkMode ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-slate-50'}`}>
-      <div className="flex items-center gap-2 text-slate-500">
+    <div className={`rounded-[18px] border px-3 py-3 ${darkMode ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-white'}`}>
+      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
         <Icon size={14} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.22em]">{label}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">{label}</span>
       </div>
-      <p className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">{value}</p>
+      <p className="mt-2 break-words text-[16px] font-bold leading-snug text-slate-950 dark:text-slate-50 sm:text-[17px]">{value}</p>
     </div>
   )
 }
@@ -74,19 +74,19 @@ export default function MapStatusBar() {
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-teal-600">{getText({ en: 'Area status', mr: 'क्षेत्र स्थिती' }, language)}</p>
-          <p className={`mt-0.5 text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-teal-700 dark:text-teal-300">{getText({ en: 'Area status', mr: 'क्षेत्र स्थिती' }, language)}</p>
+          <p className={`mt-0.5 text-xs ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
             {getText({ en: 'Tap for AQI, weather and time', mr: 'AQI, हवामान आणि वेळ पाहण्यासाठी टॅप करा' }, language)}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <div className={`rounded-full px-3 py-1 text-xs font-semibold ${darkMode ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'}`}>
+          <div className={`rounded-full px-3 py-1 text-xs font-semibold ${darkMode ? 'bg-slate-700 text-slate-100' : 'bg-slate-100 text-slate-700'}`}>
             <span>AQI {status.aqi}</span>
           </div>
-          <div className={`rounded-full px-3 py-1 text-xs font-semibold ${darkMode ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'}`}>
+          <div className={`rounded-full px-3 py-1 text-xs font-semibold ${darkMode ? 'bg-slate-700 text-slate-100' : 'bg-slate-100 text-slate-700'}`}>
             <span>{status.temperature}</span>
           </div>
-          <ChevronDown className={`transition ${expanded ? 'rotate-180' : ''} ${darkMode ? 'text-slate-300' : 'text-slate-500'}`} size={16} />
+          <ChevronDown className={`transition ${expanded ? 'rotate-180' : ''} ${darkMode ? 'text-slate-200' : 'text-slate-600'}`} size={16} />
         </div>
       </div>
 

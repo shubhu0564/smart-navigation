@@ -7,12 +7,12 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-      <div className="mx-auto flex w-full items-center justify-between gap-2 px-3 py-1.5 sm:px-6 sm:py-2 lg:px-8">
+      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 sm:flex sm:items-center sm:justify-between sm:px-6 sm:py-2 lg:px-8 xl:px-10 2xl:px-12">
 
         {/* BMC LOGO + TITLE */}
         <Link
           to="/"
-          className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3"
+          className="flex min-w-0 items-center gap-2 sm:gap-3"
         >
           <img
             src={emblem}
@@ -20,8 +20,8 @@ export default function Navbar() {
             className="h-7 w-7 shrink-0 object-contain sm:h-11 sm:w-11"
           />
 
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold leading-[1.1] tracking-tight text-slate-900 sm:text-xl dark:text-slate-100">
+          <div className="navbar-title min-w-0 max-w-[190px] sm:max-w-none">
+            <p className="text-[11px] font-semibold leading-[1.05] tracking-tight text-slate-900 sm:text-xl dark:text-slate-100">
               <span className="block sm:inline">
                 Brihanmumbai Municipal
               </span>
@@ -37,7 +37,7 @@ export default function Navbar() {
         </Link>
 
         {/* RIGHT SIDE */}
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
 
           <label
             htmlFor="language-select"

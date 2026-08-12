@@ -22,6 +22,7 @@ export default function MapContainer() {
   const [routeSummary, setRouteSummary] = useState(null)
   const [routeDetails, setRouteDetails] = useState(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [mapInstance, setMapInstance] = useState(null)
   const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
   const visibleLandmarks = useMemo(
@@ -61,6 +62,30 @@ export default function MapContainer() {
     if (!selectedLandmark || !mapRef.current) return
     mapRef.current.flyTo([selectedLandmark.latitude, selectedLandmark.longitude], 18.5, { duration: 1.2 })
   }, [selectedLandmark])
+
+  useEffect(() => {
+    if (!mapInstance || !mapWrapperRef.current) return
+
+    const invalidate = () => {
+      window.requestAnimationFrame(() => {
+        mapInstance.invalidateSize()
+      })
+    }
+
+    invalidate()
+
+    const resizeObserver = new ResizeObserver(() => {
+      invalidate()
+    })
+
+    resizeObserver.observe(mapWrapperRef.current)
+    window.addEventListener('orientationchange', invalidate)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('orientationchange', invalidate)
+    }
+  }, [mapInstance])
 
   useEffect(() => {
     const map = mapRef.current
@@ -234,7 +259,7 @@ export default function MapContainer() {
         </div>
       </div>
 
-      <div ref={mapWrapperRef} className="relative h-[460px] w-full bg-slate-100" style={{ touchAction: isTouchDevice ? 'pan-y pinch-zoom' : 'auto' }}>
+      <div ref={mapWrapperRef} className="relative w-full bg-slate-100 h-[clamp(360px,62vw,560px)] sm:h-[420px] lg:h-[520px] xl:h-[560px]" style={{ touchAction: isTouchDevice ? 'pan-y pinch-zoom' : 'auto' }}>
         {loading && (
           <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center gap-3 bg-slate-50/80 px-4 text-center">
             <LoaderCircle className="animate-spin text-teal-600" size={24} />
@@ -247,7 +272,7 @@ export default function MapContainer() {
           </div>
         )}
 
-        <LeafletMap ref={mapRef} center={[center.lat, center.lng]} zoom={16} scrollWheelZoom={!isTouchDevice} dragging={!isTouchDevice} touchZoom={!isTouchDevice} doubleClickZoom={!isTouchDevice} className="h-full w-full" whenCreated={(map) => { mapRef.current = map }}>
+        <LeafletMap ref={mapRef} center={[center.lat, center.lng]} zoom={16} scrollWheelZoom={!isTouchDevice} dragging={!isTouchDevice} touchZoom={!isTouchDevice} doubleClickZoom={!isTouchDevice} className="h-full w-full" whenCreated={(map) => { mapRef.current = map; setMapInstance(map) }}>
           <TileLayer
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
             attribution='Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
