@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import SearchBar from '../components/SearchBar'
 import MapContainer from '../components/MapContainer'
 import CategoryGrid from '../components/CategoryGrid'
+import MapStatusBar from '../components/MapStatusBar'
 import { useNavigation } from '../hooks/useNavigation'
 import { getText } from '../utils/helpers'
 
@@ -16,23 +17,24 @@ export default function HomePage() {
         className={`rounded-[32px] border p-8 shadow-sm ${darkMode ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-gradient-to-br from-sky-600 via-teal-600 to-blue-600 text-white'}`}
       >
         <div className="max-w-3xl space-y-4">
-          <h1 className="text-5xl font-extrabold leading-tight md:text-6xl text-white">{getText({ en: "Let's Explore", mr: 'चला शोधूया' }, language)}</h1>
+          <h1 className="text-5xl font-extrabold leading-tight md:text-6xl text-white">{getText({ en: "LET'S EXPLORE", mr: 'चला शोधूया' }, language)}</h1>
           <p className="text-2xl font-bold text-white sm:text-3xl">{getText({ en: 'Gulmohar JVPD Scheme Area', mr: 'गुलमोहर JVPD योजना क्षेत्र' }, language)}</p>
         </div>
       </motion.section>
 
       <section id="landmark-map-section" className="space-y-6">
         <SearchBar />
-        <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-teal-600">{getText({ en: 'Landmark Categories', mr: 'लँडमार्क वर्ग' }, language)}</p>
-              <p className="text-sm text-slate-500">{getText({ en: 'Filter places by type and focus the map.', mr: 'टाइपनुसार स्थळे फिल्टर करा आणि नकाशावर लक्ष केंद्रित करा.' }, language)}</p>
-            </div>
-          </div>
+        <div className="rounded-[32px] border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <CategoryGrid />
         </div>
         <MapContainer />
+        <MapStatusBar />
+        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="space-y-4 text-[15px] leading-7 text-slate-700 sm:text-[16px] sm:leading-8">
+            <p>In 1950, the Government of Bombay acquired over 220 acres along the Irla Nullah to develop a planned residential neighbourhood. The project was executed by the Bombay Housing Board (BHB), later known as MHADA, making it one of Mumbai&apos;s earliest planned housing developments.</p>
+            <p>The master plan created two distinct precincts: JVPD with low-density bungalow plots, and Gulmohar Road with apartments for middle-income families. Since becoming part of MHADA in 1977, the area has remained a landmark of Mumbai&apos;s planned urban development.</p>
+          </div>
+        </div>
       </section>
 
       <section className="border-t border-slate-200 bg-white py-12">
@@ -103,7 +105,7 @@ export default function HomePage() {
           <div className="border-t border-slate-200"></div>
 
           <div className="space-y-6 text-center">
-            <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">DESIGNED BY</h2>
+            <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">DESIGN BY</h2>
             <a
               href="https://sapthakalaa.co.in"
               target="_blank"

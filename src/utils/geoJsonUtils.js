@@ -1,5 +1,32 @@
 const DEFAULT_CENTER = { lat: 19.105, lng: 72.824 }
 
+const LANDMARK_CATEGORY_IDS = {
+  Park: 'park',
+  School: 'education',
+  Institute: 'education',
+  'Research Institute': 'education',
+  'Bus Stop': 'busStop',
+  Government: 'government',
+}
+
+const LANDMARK_CATEGORY_LABELS = {
+  all: 'Landmark',
+  landmark: 'Landmark',
+  park: 'Park / Playground',
+  education: 'Educational Institute',
+  busStop: 'Bus Stop',
+  government: 'Government Building',
+}
+
+export function getLandmarkCategoryId(category) {
+  const normalized = String(category ?? '').trim()
+  return LANDMARK_CATEGORY_IDS[normalized] ?? 'landmark'
+}
+
+export function getLandmarkCategoryLabel(categoryId) {
+  return LANDMARK_CATEGORY_LABELS[categoryId] ?? 'Landmark'
+}
+
 function toRadians(degrees) {
   return (degrees * Math.PI) / 180
 }
@@ -21,6 +48,7 @@ export function normalizeLandmarkFeature(feature, referencePoint = DEFAULT_CENTE
   if (!feature || feature.type !== 'Feature' || !feature.geometry) return null
   const { properties = {} } = feature
   const [lng, lat] = feature.geometry.coordinates || [referencePoint.lng, referencePoint.lat]
+  const categoryId = getLandmarkCategoryId(properties.category)
 
   const distanceKm = haversineDistanceKm({ lat, lng }, referencePoint)
   const walkDistanceKm = Math.max(0.3, Number((distanceKm * 1.3).toFixed(1)))
@@ -31,7 +59,9 @@ export function normalizeLandmarkFeature(feature, referencePoint = DEFAULT_CENTE
     number: String(properties.id ?? '').padStart(2, '0'),
     name: properties.name ?? 'Unknown place',
     road: properties.road ?? properties.address ?? '',
-    category: properties.category ?? 'Unknown',
+    category: categoryId,
+    categoryLabel: getLandmarkCategoryLabel(categoryId),
+    sourceCategory: properties.category ?? 'Unknown',
     latitude: lat,
     longitude: lng,
     lat,
@@ -64,12 +94,12 @@ export function filterLandmarksGeoJson(geoJson, selectedCategory, searchQuery, e
   if (!geoJson || !Array.isArray(geoJson.features)) return null
   const query = String(searchQuery || '').trim().toLowerCase()
   const features = geoJson.features.filter((feature) => {
-    const category = feature?.properties?.category ?? ''
+    const category = getLandmarkCategoryId(feature?.properties?.category)
     const name = feature?.properties?.name ?? ''
     const road = feature?.properties?.road ?? ''
 
     const categoryMatch = selectedCategory === 'all' || category === selectedCategory
-    const enabledMatch = enabledCategories.length === 0 || enabledCategories.includes(category)
+    const enabledMatch = enabledCategories.length === 0 || enabledCategories.includes(category) || category === 'landmark'
     const searchMatch =
       !query || [name, road, category, String(feature?.properties?.id ?? '')].some((value) => value.toLowerCase().includes(query))
 

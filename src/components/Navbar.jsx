@@ -7,21 +7,21 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-      <div className="mx-auto flex w-full items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-3 lg:px-8">
+      <div className="mx-auto flex w-full items-center justify-between gap-2 px-3 py-1.5 sm:px-6 sm:py-2 lg:px-8">
 
         {/* BMC LOGO + TITLE */}
         <Link
           to="/"
-          className="flex min-w-0 items-center gap-2 sm:gap-3"
+          className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3"
         >
           <img
             src={emblem}
             alt="Brihanmumbai Municipal Corporation"
-            className="h-9 w-9 shrink-0 object-contain sm:h-12 sm:w-12"
+            className="h-7 w-7 shrink-0 object-contain sm:h-11 sm:w-11"
           />
 
-          <div className="min-w-0">
-            <p className="text-[13px] font-semibold leading-tight tracking-tight text-slate-900 sm:text-xl dark:text-slate-100">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold leading-[1.1] tracking-tight text-slate-900 sm:text-xl dark:text-slate-100">
               <span className="block sm:inline">
                 Brihanmumbai Municipal
               </span>
@@ -30,7 +30,7 @@ export default function Navbar() {
               </span>
             </p>
 
-            <p className="mt-1 text-[10px] leading-tight text-slate-500 sm:text-base dark:text-slate-400">
+            <p className="mt-0.5 text-[9px] leading-tight text-slate-500 sm:mt-1 sm:text-base dark:text-slate-400">
               K/West Ward – 67
             </p>
           </div>
@@ -50,7 +50,7 @@ export default function Navbar() {
             id="language-select"
             value={language}
             onChange={(event) => setLanguage(event.target.value)}
-            className="h-8 min-w-[65px] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-medium text-slate-700 shadow-sm outline-none sm:h-9 sm:min-w-[90px] sm:px-3 sm:text-sm"
+            className="h-7 min-w-[72px] rounded-full border border-slate-200 bg-white px-2 text-[10px] font-medium text-slate-700 shadow-sm outline-none sm:h-9 sm:min-w-[90px] sm:px-3 sm:text-sm"
           >
             <option value="en">English</option>
             <option value="mr">Marathi</option>

@@ -16,6 +16,8 @@ function getScore(item, query) {
   const name = normalizeText(item.name)
   const road = normalizeText(item.road)
   const category = normalizeText(item.category)
+  const categoryLabel = normalizeText(item.categoryLabel)
+  const sourceCategory = normalizeText(item.sourceCategory)
   const description = normalizeText(item.description)
 
   if (!q) return { score: 0, matchType: 'none' }
@@ -24,6 +26,8 @@ function getScore(item, query) {
   if (name.includes(q)) return { score: 90, matchType: 'partialName' }
   if (road.includes(q)) return { score: 80, matchType: 'road' }
   if (category.includes(q)) return { score: 70, matchType: 'category' }
+  if (categoryLabel.includes(q)) return { score: 70, matchType: 'categoryLabel' }
+  if (sourceCategory.includes(q)) return { score: 70, matchType: 'sourceCategory' }
   if (description.includes(q)) return { score: 60, matchType: 'description' }
 
   return { score: 0, matchType: 'none' }

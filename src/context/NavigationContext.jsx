@@ -1,33 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { NavigationContext } from './NavigationContext.js'
 import { useGeoJsonData } from '../hooks/useGeoJsonData'
-import { normalizeLandmarks } from '../utils/geoJsonUtils'
+import { getLandmarkCategoryId, normalizeLandmarks } from '../utils/geoJsonUtils'
 
 const categoryMeta = {
-  all: { label: { en: 'All Places', mr: 'सर्व स्थळे' }, icon: 'Compass' },
-  'Hospitals / Medical': { label: { en: 'Hospitals / Medical', mr: 'रुग्णालये / वैद्यकीय' }, icon: 'HeartPulse' },
-  Park: { label: { en: 'Parks', mr: 'बागा' }, icon: 'Trees' },
-  Institute: { label: { en: 'Educational Institutes', mr: 'शैक्षणिक संस्था' }, icon: 'Building2' },
-  Community: { label: { en: 'Community Centres', mr: 'समुदाय केंद्रे' }, icon: 'Landmark' },
-  'Bus Stop': { label: { en: 'Bus Stops', mr: 'बस थांबे' }, icon: 'Bus' },
-  'Public Toilet': { label: { en: 'Public Toilets', mr: 'सार्वजनिक शौचालये' }, icon: 'Toilet' },
-  Temple: { label: { en: 'Temples', mr: 'मंदिर' }, icon: 'Church' },
-  Government: { label: { en: 'Government Buildings', mr: 'सरकारी इमारती' }, icon: 'Building2' },
-  School: { label: { en: 'Schools', mr: 'शाळा' }, icon: 'School' },
-  'Research Institute': { label: { en: 'Research Institutes', mr: 'संशोधन संस्था' }, icon: 'Building2' },
-  Club: { label: { en: 'Clubs', mr: 'क्लब' }, icon: 'Users' },
+  all: { label: { en: 'Landmark', mr: 'लँडमार्क' }, icon: 'Landmark' },
+  park: { label: { en: 'Park / Playground', mr: 'उद्यान / खेळाचे मैदान' }, icon: 'Trees' },
+  education: { label: { en: 'Educational Institute', mr: 'शैक्षणिक संस्था' }, icon: 'School' },
+  busStop: { label: { en: 'Bus Stop', mr: 'बस थांबा' }, icon: 'Bus' },
+  government: { label: { en: 'Government Building', mr: 'सरकारी इमारत' }, icon: 'Building2' },
 }
 
 const categoryOrder = [
   'all',
-  'Hospitals / Medical',
-  'Park',
-  'Institute',
-  'Community',
-  'Bus Stop',
-  'Public Toilet',
-  'Temple',
-  'Government',
+  'park',
+  'education',
+  'busStop',
+  'government',
 ]
 
 const desiredCategories = categoryOrder.filter((id) => id !== 'all')
@@ -51,7 +40,7 @@ export function NavigationProvider({ children }) {
     const features = geoJson.landmarks?.features ?? []
     counts.all = features.length
     features.forEach((feature) => {
-      const category = feature?.properties?.category || 'Unknown'
+      const category = getLandmarkCategoryId(feature?.properties?.category)
       counts[category] = (counts[category] ?? 0) + 1
     })
     return counts

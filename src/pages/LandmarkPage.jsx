@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, MapPin, Star, Route } from 'lucide-react'
 import { useNavigation } from '../hooks/useNavigation'
 import { getText, formatDistance } from '../utils/helpers'
+import { getCategoryLabel } from '../utils/helpers'
 
 export default function LandmarkPage() {
   const { id } = useParams()
@@ -19,7 +20,7 @@ export default function LandmarkPage() {
         <div className="p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-teal-600">{item.category}</p>
+              <p className="text-sm font-semibold text-teal-600">{getCategoryLabel(item.category, language)}</p>
               <h2 className="text-2xl font-semibold">{item.name}</h2>
             </div>
             <div className="rounded-full bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-600">

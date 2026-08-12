@@ -1,15 +1,14 @@
 import { motion } from 'framer-motion'
-import { FaBuilding, FaChurch, FaLandmark, FaMapMarkedAlt, FaSchool, FaTree, FaHospital } from 'react-icons/fa'
+import { FaBuilding, FaLandmark, FaMapMarkedAlt, FaSchool, FaTree, FaBus } from 'react-icons/fa'
 import { getCategoryLabel } from '../utils/helpers'
 import { highlightText } from '../utils/searchUtils'
 
 const iconMap = {
-  Park: FaTree,
-  School: FaSchool,
-  Government: FaBuilding,
-  Community: FaLandmark,
-  Temple: FaChurch,
-  'Hospitals / Medical': FaHospital,
+  landmark: FaLandmark,
+  park: FaTree,
+  education: FaSchool,
+  busStop: FaBus,
+  government: FaBuilding,
   default: FaMapMarkedAlt,
 }
 
@@ -37,7 +36,7 @@ export default function SearchResultCard({ item, query, isActive, onSelect, lang
             ))}
           </p>
           <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
-            {item.category}
+            {getCategoryLabel(item.category, language)}
           </span>
         </div>
         <p className="mt-1 line-clamp-2 text-xs text-slate-600">

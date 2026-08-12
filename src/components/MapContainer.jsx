@@ -22,6 +22,7 @@ export default function MapContainer() {
   const [routeSummary, setRouteSummary] = useState(null)
   const [routeDetails, setRouteDetails] = useState(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
   const visibleLandmarks = useMemo(
     () => filterLandmarksGeoJson(geoJson.landmarks, selectedCategory, searchQuery, enabledCategories),
@@ -60,6 +61,42 @@ export default function MapContainer() {
     if (!selectedLandmark || !mapRef.current) return
     mapRef.current.flyTo([selectedLandmark.latitude, selectedLandmark.longitude], 18.5, { duration: 1.2 })
   }, [selectedLandmark])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !isTouchDevice) return
+
+    map.dragging.disable()
+    map.touchZoom.disable()
+
+    const container = map.getContainer()
+
+    const enableTwoFingerInteraction = (event) => {
+      if (event.touches?.length >= 2) {
+        map.dragging.enable()
+        map.touchZoom.enable()
+      }
+    }
+
+    const disableSingleFingerInteraction = (event) => {
+      if (event.touches?.length < 2) {
+        map.dragging.disable()
+        map.touchZoom.disable()
+      }
+    }
+
+    container.addEventListener('touchstart', enableTwoFingerInteraction, true)
+    container.addEventListener('touchmove', enableTwoFingerInteraction, true)
+    container.addEventListener('touchend', disableSingleFingerInteraction, true)
+    container.addEventListener('touchcancel', disableSingleFingerInteraction, true)
+
+    return () => {
+      container.removeEventListener('touchstart', enableTwoFingerInteraction, true)
+      container.removeEventListener('touchmove', enableTwoFingerInteraction, true)
+      container.removeEventListener('touchend', disableSingleFingerInteraction, true)
+      container.removeEventListener('touchcancel', disableSingleFingerInteraction, true)
+    }
+  }, [isTouchDevice])
 
   useEffect(() => {
     if (!position || !selectedLandmark || !mapRef.current) return
@@ -193,12 +230,11 @@ export default function MapContainer() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-xl">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <div>
-          <p className="text-sm font-semibold text-teal-600">{getText({ en: 'Live GIS map', mr: 'थेट GIS नकाशा' }, language)}</p>
-          <p className="text-sm text-slate-500">{getText({ en: 'Satellite imagery • QGIS GeoJSON layers', mr: 'सॅटेलाइट प्रतिमा • QGIS GeoJSON स्तर' }, language)}</p>
+          <p className="text-sm font-semibold text-teal-600">{getText({ en: 'GIS MAP', mr: 'GIS नकाशा' }, language)}</p>
         </div>
       </div>
 
-      <div ref={mapWrapperRef} className="relative h-[460px] w-full bg-slate-100">
+      <div ref={mapWrapperRef} className="relative h-[460px] w-full bg-slate-100" style={{ touchAction: isTouchDevice ? 'pan-y pinch-zoom' : 'auto' }}>
         {loading && (
           <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center gap-3 bg-slate-50/80 px-4 text-center">
             <LoaderCircle className="animate-spin text-teal-600" size={24} />
@@ -211,7 +247,7 @@ export default function MapContainer() {
           </div>
         )}
 
-        <LeafletMap ref={mapRef} center={[center.lat, center.lng]} zoom={16} scrollWheelZoom className="h-full w-full" whenCreated={(map) => { mapRef.current = map }}>
+        <LeafletMap ref={mapRef} center={[center.lat, center.lng]} zoom={16} scrollWheelZoom={!isTouchDevice} dragging={!isTouchDevice} touchZoom={!isTouchDevice} doubleClickZoom={!isTouchDevice} className="h-full w-full" whenCreated={(map) => { mapRef.current = map }}>
           <TileLayer
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
             attribution='Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'

@@ -33,19 +33,6 @@ const styles = {
   },
 }
 
-const categoryIconMap = {
-  Park: '🌳',
-  School: '🏫',
-  Government: '🏛️',
-  'Research Institute': '🏛️',
-  Community: '🏘️',
-  Temple: '🛕',
-  Institute: '🎓',
-  Club: '🎯',
-  'Bus Stop': '🚌',
-  'Public Toilet': '🚻',
-}
-
 const getSafeString = (value) => {
   if (value === null || value === undefined) {
     return 'Not assigned'
@@ -169,45 +156,7 @@ export default function GeoJsonLayer({
       })
     }
 
-    const category =
-      feature?.properties?.category || 'Landmark'
-
-    const iconText =
-      categoryIconMap[category] ?? '📍'
-
-    const active =
-      activeFeatureId === getFeatureId(feature)
-
-    const size = active ? 40 : 32
-
-    const icon = L.divIcon({
-      className: 'custom-geojson-marker',
-
-      html: `
-        <div style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 999px;
-          width: ${size}px;
-          height: ${size}px;
-          background: #0f766e;
-          color: white;
-          font-size: ${active ? 16 : 14}px;
-          border: 2px solid white;
-          box-shadow: 0 10px 24px rgba(15,23,42,0.18);
-        ">
-          ${iconText}
-        </div>
-      `,
-
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2],
-    })
-
-    return L.marker(latlng, {
-      icon,
-    })
+    return null
   }
 
   // Feature events
@@ -266,13 +215,6 @@ export default function GeoJsonLayer({
   }, [featureData])
 
   if (!filteredData) {
-    return null
-  }
-
-  // ============================================
-  // TEMPORARILY HIDE LANDMARKS
-  // ============================================
-  if (layerKey === 'landmarks') {
     return null
   }
 
