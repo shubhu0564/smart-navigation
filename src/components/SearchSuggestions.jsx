@@ -16,9 +16,14 @@ export default function SearchSuggestions({ suggestions, query, activeIndex, onS
               <div className="rounded-2xl bg-slate-50 px-3 py-4 text-sm text-slate-600">{emptyMessage}</div>
             ) : (
               <div className="space-y-2">
-                {suggestions.map((item, index) => (
-                  <SearchResultCard key={item.id} item={item} query={query} isActive={index === activeIndex} onSelect={onSelect} language={language} />
-                ))}
+                {suggestions.map((item, index) => {
+                  // suggestions may be recent search strings or normalized objects.
+                  // Use a stable key: prefer explicit `id`, then derive from identifying props, finally fall back to the string value.
+                  const key = typeof item === 'string'
+                    ? `recent-${item}`
+                    : (item.id ?? `${item.name ?? 'sugg'}-${item.latitude ?? ''}-${item.longitude ?? ''}`)
+                  return <SearchResultCard key={key} item={item} query={query} isActive={index === activeIndex} onSelect={onSelect} language={language} />
+                })}
               </div>
             )}
           </div>

@@ -9,7 +9,7 @@ export function useLiveLocation() {
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported in this browser.')
+      setError('Location is not supported by this browser.')
       setLoading(false)
       return
     }
@@ -24,7 +24,16 @@ export function useLiveLocation() {
           setError(null)
         },
         (geoError) => {
-          setError(geoError.message)
+          // map error codes to friendly messages
+          let message = geoError?.message ?? 'Unable to get location.'
+          if (geoError?.code === 1) {
+            message = 'Location permission was denied. Please allow location access in your browser settings.'
+          } else if (geoError?.code === 2) {
+            message = 'Your current location is unavailable.'
+          } else if (geoError?.code === 3) {
+            message = 'Location request timed out. Please try again.'
+          }
+          setError(message)
           setLoading(false)
         },
         {
@@ -47,7 +56,15 @@ export function useLiveLocation() {
         setError(null)
       },
       (geoError) => {
-        setError(geoError.message)
+        let message = geoError?.message ?? 'Unable to get location.'
+        if (geoError?.code === 1) {
+          message = 'Location permission was denied. Please allow location access in your browser settings.'
+        } else if (geoError?.code === 2) {
+          message = 'Your current location is unavailable.'
+        } else if (geoError?.code === 3) {
+          message = 'Location request timed out. Please try again.'
+        }
+        setError(message)
         setLoading(false)
       },
       {

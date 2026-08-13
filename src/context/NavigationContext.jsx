@@ -1,22 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import { NavigationContext } from './NavigationContext.js'
 import { useGeoJsonData } from '../hooks/useGeoJsonData'
-import { getLandmarkCategoryId, normalizeLandmarks } from '../utils/geoJsonUtils'
+import { getLandmarkCategoryId, normalizeLandmarks, filterGeoJsonBySite, extractLandmarksFromClientBuildings } from '../utils/geoJsonUtils'
 
 const categoryMeta = {
   all: { label: { en: 'Landmark', mr: 'लँडमार्क' }, icon: 'Landmark' },
-  park: { label: { en: 'Park / Playground', mr: 'उद्यान / खेळाचे मैदान' }, icon: 'Trees' },
   education: { label: { en: 'Educational Institute', mr: 'शैक्षणिक संस्था' }, icon: 'School' },
   busStop: { label: { en: 'Bus Stop', mr: 'बस थांबा' }, icon: 'Bus' },
   government: { label: { en: 'Government Building', mr: 'सरकारी इमारत' }, icon: 'Building2' },
+  park: { label: { en: 'Park / Playground', mr: 'उद्यान / मैदान' }, icon: 'Tree' },
+  community: { label: { en: 'Community Center', mr: 'समुदाय केंद्र' }, icon: 'Users' },
 }
 
 const categoryOrder = [
   'all',
-  'park',
   'education',
   'busStop',
   'government',
+  'park',
+  'community',
 ]
 
 const desiredCategories = categoryOrder.filter((id) => id !== 'all')
@@ -33,18 +35,29 @@ export function NavigationProvider({ children }) {
   const [toast, setToast] = useState(null)
   const [routeInfo, setRouteInfo] = useState(null)
   const { geoJson, loading, error } = useGeoJsonData()
-  const landmarks = useMemo(() => normalizeLandmarks(geoJson.landmarks), [geoJson.landmarks])
+  // Derive landmarks from client buildings so placement uses building geometry centroid
+  const landmarks = useMemo(() => {
+    // prefer clientBuildings as source of truth for landmark placement
+    const client = geoJson.clientBuildings || { type: 'FeatureCollection', features: [] }
+    const derived = extractLandmarksFromClientBuildings(client)
+    return normalizeLandmarks(derived, { lat: 19.112, lng: 72.836 })
+  }, [geoJson.clientBuildings])
 
   const categoryCounts = useMemo(() => {
     const counts = { all: 0 }
-    const features = geoJson.landmarks?.features ?? []
+    // count derived landmarks (from client buildings)
+    const derived = extractLandmarksFromClientBuildings(geoJson.clientBuildings || { type: 'FeatureCollection', features: [] })
+    const features = (geoJson.siteBoundary && derived) ? (filterGeoJsonBySite(derived, geoJson.siteBoundary).features || []) : (derived?.features ?? [])
     counts.all = features.length
     features.forEach((feature) => {
-      const category = getLandmarkCategoryId(feature?.properties?.category)
+      const category = getLandmarkCategoryId(feature?.properties?.derivedCategory || feature?.properties?.category)
+      // only include visible categories in counts; treat uncategorized separately (not exposed)
       counts[category] = (counts[category] ?? 0) + 1
     })
+    const busStopFeatures = geoJson.busStops?.features ?? []
+    counts['busStop'] = (counts['busStop'] ?? 0) + busStopFeatures.length
     return counts
-  }, [geoJson.landmarks])
+  }, [geoJson.landmarks, geoJson.busStops])
 
   const categories = useMemo(() => {
     const ordered = ['all', ...desiredCategories]

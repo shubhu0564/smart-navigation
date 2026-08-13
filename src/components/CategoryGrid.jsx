@@ -2,15 +2,42 @@ import { motion } from 'framer-motion'
 import * as Icons from 'lucide-react'
 import { useNavigation } from '../hooks/useNavigation'
 import { getText } from '../utils/helpers'
+import { normalizeLandmarkFeature } from '../utils/geoJsonUtils'
 
 export default function CategoryGrid() {
-  const { language, selectedCategory, setSelectedCategory, darkMode, categories, landmarks, setSelectedLandmark } = useNavigation()
+  const { language, selectedCategory, setSelectedCategory, darkMode, categories, landmarks, setSelectedLandmark, geoJson } = useNavigation()
 
   const handleCategoryClick = (categoryId) => {
     setSelectedCategory(categoryId)
-    if (categoryId !== 'all') {
-      const firstMatch = landmarks.find((item) => item.category === categoryId)
-      if (firstMatch) setSelectedLandmark(firstMatch)
+    if (categoryId === 'all') return
+
+    // Prefer derived landmarks (from client buildings) so placement and fit use original building geometry
+    if (categoryId === 'busStop' && geoJson.busStops?.features?.length) {
+      const feature = geoJson.busStops.features[0]
+      const normalized = normalizeLandmarkFeature(feature)
+      if (normalized) normalized.feature = feature
+      setSelectedLandmark(normalized)
+      return
+    }
+
+    if (landmarks && landmarks.length > 0) {
+      const found = landmarks.find((l) => l.category === categoryId) || landmarks[0]
+      if (found) {
+        setSelectedLandmark(found)
+        return
+      }
+    }
+
+    // fallback: attempt to use geoJson.landmarks but avoid relying on it for placement
+    if (geoJson.landmarks?.features?.length) {
+      const feature = geoJson.landmarks.features.find((f) => normalizeLandmarkFeature(f)?.category === categoryId) || geoJson.landmarks.features[0]
+      if (feature) {
+        const normalized = normalizeLandmarkFeature(feature)
+        if (normalized) {
+          normalized.feature = feature
+          setSelectedLandmark(normalized)
+        }
+      }
     }
   }
 

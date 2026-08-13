@@ -1,0 +1,13 @@
+{
+"type": "FeatureCollection",
+"name": "bus_stops",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "id": 1, "Name": "Sukhmani Society BEST Bus stop" }, "geometry": { "type": "Point", "coordinates": [ 72.830011943684895, 19.112603789904494 ] } },
+{ "type": "Feature", "properties": { "id": 2, "Name": "Saurashtra Society BEST Bus Stop" }, "geometry": { "type": "Point", "coordinates": [ 72.830088725568046, 19.114748251748324 ] } },
+{ "type": "Feature", "properties": { "id": 3, "Name": "JVPD Bus Station" }, "geometry": { "type": "Point", "coordinates": [ 72.831372563820182, 19.115955966274115 ] } },
+{ "type": "Feature", "properties": { "id": 4, "Name": "Juhu Shopping Center BEST Bus Stop" }, "geometry": { "type": "Point", "coordinates": [ 72.834897755573095, 19.115469467491021 ] } },
+{ "type": "Feature", "properties": { "id": 5, "Name": "Gagandip BEST Bus Stop" }, "geometry": { "type": "Point", "coordinates": [ 72.836617443926656, 19.113829657319258 ] } },
+{ "type": "Feature", "properties": { "id": 6, "Name": "Irla Masjid BEST Bus Stop" }, "geometry": { "type": "Point", "coordinates": [ 72.837192178904957, 19.110958616740831 ] } }
+]
+}

@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 
 const GEOJSON_FILES = {
   siteBoundary: 'site_boundary.geojson',
-  roads: 'roads.geojson',
   buildings: 'buildings.geojson',
+  clientBuildings: 'client_buildings.geojson',
+  busStops: 'bus_stops.geojson',
+  parkPlayground: 'park_playground.geojson',
+  roads: 'roads.geojson',
   openSpaces: 'open_spaces.geojson',
-  landmarks: 'landmarks.geojson',
 }
 
 async function fetchGeoJson(fileName) {
@@ -16,32 +18,55 @@ async function fetchGeoJson(fileName) {
     const response = await fetch(fetchUrl)
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to load ${fetchUrl}: ${response.status}`
+      console.error(
+        `[useGeoJsonData] Failed to load ${fetchUrl}: HTTP ${response.status}`
       )
+      return null
     }
 
-    const json = await response.json()
+    const contentType = response.headers.get('content-type') || ''
+
+    // Accept typical JSON/GeoJSON content types
+    const isJson = /json|geo\+json|application\/octet-stream/i.test(contentType)
+
+    if (!isJson) {
+      // Do not attempt to parse non-JSON (HTML error pages etc.)
+      const text = await response.text()
+      const snippet = text.slice(0, 240).replace(/\s+/g, ' ')
+      console.error(
+        `[useGeoJsonData] Invalid Content-Type for ${fetchUrl}: ${contentType} — response start: ${snippet}`
+      )
+      return null
+    }
+
+    let json
+    try {
+      json = await response.json()
+    } catch (parseErr) {
+      console.error(
+        `[useGeoJsonData] Failed to parse JSON from ${fetchUrl}: ${parseErr.message}`
+      )
+      return null
+    }
 
     if (
       !json ||
       json.type !== 'FeatureCollection' ||
       !Array.isArray(json.features)
     ) {
-      throw new Error(
-        `${fileName} is not a valid GeoJSON FeatureCollection`
+      console.error(
+        `[useGeoJsonData] ${fileName} is not a valid GeoJSON FeatureCollection`
       )
+      return null
     }
 
     if (fileName === 'buildings.geojson') {
-      console.log(
-        `Loaded ${json.features.length} building features`
-      )
+      console.log(`Loaded ${json.features.length} building features`)
     }
 
     return json
   } catch (error) {
-    console.error(`[useGeoJsonData] ${error.message}`)
+    console.error(`[useGeoJsonData] ${error?.message || error}`)
     return null
   }
 }
@@ -52,7 +77,10 @@ export function useGeoJsonData() {
     roads: null,
     buildings: null,
     openSpaces: null,
+    parkPlayground: null,
     landmarks: null,
+    clientBuildings: null,
+    busStops: null,
   })
 
   const [loading, setLoading] = useState(true)
