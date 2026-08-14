@@ -21,7 +21,6 @@ import { useLiveLocation } from '../hooks/useLiveLocation'
 import { getText } from '../utils/helpers'
 import FloatingActionBar from './FloatingActionBar'
 import GeoJsonLayer from './GeoJsonLayer'
-import LandmarkPopup from './LandmarkPopup'
 import { filterLandmarksGeoJson, filterGeoJsonBySite, getLandmarkCategoryId, getLandmarkCategoryLabel, deriveFeatureCategory, extractLandmarksFromClientBuildings } from '../utils/geoJsonUtils'
 
 export default function MapContainer() {
@@ -257,7 +256,8 @@ export default function MapContainer() {
                 <div style="font-family: system-ui, sans-serif; min-width: 230px; line-height: 1.5; color: #0f172a;">
                   <div style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Building Details</div>
                   <div style="font-size: 14px; margin-bottom: 8px;"><strong>Building Name:</strong><br/>${buildingName || 'Unnamed Building'}</div>
-                  <div style="font-size: 14px;"><strong>Building No:</strong><br/>${buildingNo ?? 'Not assigned'}</div>
+                  <div style="font-size: 14px; margin-bottom: 12px;"><strong>Building No:</strong><br/>${buildingNo ?? 'Not assigned'}</div>
+                  <a href="https://www.google.com/maps/search/?api=1&query=${bounds.getCenter().lat},${bounds.getCenter().lng}" target="_blank" rel="noopener noreferrer" style="display:block; width:100%; box-sizing:border-box; text-align:center; text-decoration:none; background:#009f91; color:#fff; padding:10px 14px; border-radius:12px; font-size:14px; font-weight:600;">Open in Google Maps</a>
                 </div>
               `
 
@@ -298,7 +298,8 @@ export default function MapContainer() {
               <div style="font-family: system-ui, sans-serif; min-width: 230px; line-height: 1.5; color: #0f172a;">
                 <div style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Building Details</div>
                 <div style="font-size: 14px; margin-bottom: 8px;"><strong>Building Name:</strong><br/>${buildingName || 'Unnamed Building'}</div>
-                <div style="font-size: 14px;"><strong>Building No:</strong><br/>${buildingNo ?? 'Not assigned'}</div>
+                <div style="font-size: 14px; margin-bottom: 12px;"><strong>Building No:</strong><br/>${buildingNo ?? 'Not assigned'}</div>
+              <a href="https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}" target="_blank" rel="noopener noreferrer" style="display:block; width:100%; box-sizing:border-box; text-align:center; text-decoration:none; background:#009f91; color:#fff; padding:10px 14px; border-radius:12px; font-size:14px; font-weight:600;">Open in Google Maps</a>
               </div>
             `
             L.popup({ maxWidth: 320, closeButton: true }).setLatLng([destination.lat, destination.lng]).setContent(popupContent).openOn(mapRef.current)
@@ -689,12 +690,33 @@ export default function MapContainer() {
         <div
           style="
             font-size: 14px;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
           "
         >
           <strong>Building No:</strong><br/>
           ${buildingNo}
         </div>
+
+        <a
+          href="https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            text-decoration: none;
+            background: #009f91;
+            color: white;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+          "
+        >
+          Open in Google Maps
+        </a>
       </div>
     `
 
@@ -1706,38 +1728,6 @@ export default function MapContainer() {
         </div>
       </motion.div>
 
-      {/* =====================================================
-          SELECTED FEATURE POPUP
-         ===================================================== */}
-
-      {selectedLandmark && (
-        <LandmarkPopup
-          landmark={
-            selectedLandmark
-          }
-
-          onNavigate={() => {
-            setToast({
-              en: 'Starting navigation...',
-              mr: 'मार्गदर्शन सुरू होते आहे...',
-            })
-
-            startRouting()
-          }}
-
-          onViewMap={
-            focusOnSelected
-          }
-
-          onClose={() => {
-            clearRouting()
-
-            setSelectedLandmark(
-              null
-            )
-          }}
-        />
-      )}
     </>
   )
 }

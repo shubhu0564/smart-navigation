@@ -7,38 +7,80 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-[minmax(0,1fr)_auto] items-center gap-1 px-2 py-1 sm:flex sm:items-center sm:justify-between sm:gap-2 sm:px-6 sm:py-2 lg:px-8 xl:px-10 2xl:px-12 md:gap-2 md:px-3 md:py-1.5">
+      
+      <div
+        className="
+          mx-auto flex w-full max-w-[1440px]
+          items-center justify-between
+          px-4 py-3
+          sm:px-6 sm:py-3
+          lg:px-8
+          xl:px-10
+          2xl:px-12
+        "
+      >
 
-        {/* BMC LOGO + TITLE */}
+        {/* =========================
+            BMC LOGO + INFORMATION
+        ========================== */}
         <Link
           to="/"
-          className="flex min-w-0 items-center gap-1.5 sm:gap-3 md:gap-2"
+          className="flex min-w-0 items-center gap-2.5 sm:gap-3"
         >
           <img
             src={emblem}
             alt="Brihanmumbai Municipal Corporation"
-            className="h-6 w-6 shrink-0 object-contain sm:h-11 sm:w-11 md:h-8 md:w-8"
+            className="
+              h-10 w-10
+              shrink-0
+              object-contain
+              sm:h-12 sm:w-12
+            "
           />
 
-          <div className="navbar-title min-w-0 max-w-[160px] sm:max-w-none md:max-w-none">
-            <p className="text-[10px] font-semibold leading-[1.05] tracking-tight text-slate-900 sm:text-xl md:text-sm dark:text-slate-100">
-              <span className="block sm:inline md:inline">
+          <div className="min-w-0">
+            <p
+              className="
+                text-[13px]
+                font-bold
+                leading-[1.1]
+                tracking-tight
+                text-slate-900
+                sm:text-[16px]
+                dark:text-slate-100
+              "
+            >
+              <span className="block">
                 Brihanmumbai Municipal
               </span>
-              <span className="block sm:inline sm:ml-1 md:inline md:ml-1">
+
+              <span className="block">
                 Corporation
               </span>
             </p>
 
-            <p className="mt-0.5 text-[8px] leading-tight text-slate-500 sm:mt-1 sm:text-base md:text-xs dark:text-slate-400">
+            <p
+              className="
+                mt-1
+                text-[10px]
+                leading-tight
+                text-slate-500
+                sm:text-[12px]
+                dark:text-slate-400
+              "
+            >
               K/West Ward – 67
             </p>
           </div>
         </Link>
 
-        {/* RIGHT SIDE */}
-        <div className="flex shrink-0 items-center gap-1 sm:gap-3 md:gap-2">
 
+        {/* =========================
+            RIGHT SIDE
+        ========================== */}
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+
+          {/* LANGUAGE SELECTOR */}
           <label
             htmlFor="language-select"
             className="sr-only"
@@ -50,23 +92,77 @@ export default function Navbar() {
             id="language-select"
             value={language}
             onChange={(event) => setLanguage(event.target.value)}
-            className="language-select-mobile h-6 w-[60px] rounded-full border border-slate-200 bg-white px-1.5 text-[9px] font-medium text-slate-700 shadow-sm outline-none sm:h-9 sm:min-w-[90px] sm:w-auto sm:px-3 sm:text-sm md:h-8 md:min-w-[75px] md:px-2 md:text-xs"
+            className="
+              h-8
+              w-[58px]
+              rounded-full
+              border
+              border-slate-200
+              bg-white
+              px-2
+              text-[11px]
+              font-semibold
+              text-slate-700
+              shadow-sm
+              outline-none
+
+              focus:border-teal-500
+              focus:ring-1
+              focus:ring-teal-200
+
+              sm:h-9
+              sm:w-[70px]
+              sm:text-xs
+            "
           >
-            <option value="en">Eng</option>
-            <option value="mr">म</option>
+            <option value="en">
+              Eng
+            </option>
+
+            <option value="mr">
+              म
+            </option>
           </select>
 
+
+          {/* =========================
+              SAPTHAKALAA LOGO
+          ========================== */}
           <a
             href="https://sapthakalaa.co.in"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Sapthakalaa"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white p-1 shadow-sm sm:h-11 sm:w-11 sm:p-2 md:h-8 md:w-8 md:p-1.5"
+            className="
+              flex
+              h-11
+              w-11
+              shrink-0
+              items-center
+              justify-center
+              rounded-full
+              border
+              border-slate-200
+              bg-white
+              p-1.5
+              shadow-sm
+              transition
+              duration-200
+              hover:scale-105
+
+              sm:h-12
+              sm:w-12
+              sm:p-2
+            "
           >
             <img
               src="/images/guided-by/image.png"
               alt="Sapthakalaa logo"
-              className="h-full w-full object-contain"
+              className="
+                h-full
+                w-full
+                object-contain
+              "
             />
           </a>
 
