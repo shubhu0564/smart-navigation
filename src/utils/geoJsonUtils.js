@@ -1,3 +1,154 @@
+export const CORPORATION_LANDMARKS = [
+  {
+    id: 1,
+    name: 'Kishore Kumar Bagh',
+  },
+  {
+    id: 2,
+    name: 'Vijay Tendulkar Amphitheatre',
+  },
+  {
+    id: 3,
+    name: 'Kaifi Azmi Park',
+  },
+  {
+    id: 4,
+    name: 'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
+  },
+  {
+    id: 5,
+    name: 'Vrajlal Parekh Vidyanidhi High School',
+  },
+  {
+    id: 6,
+    name: 'Manoj Kumar Garden',
+  },
+  {
+    id: 7,
+    name: 'Smt SB Aarya Vidya Mandir',
+  },
+  {
+    id: 8,
+    name: 'Lokmanya Tilak Udyan',
+  },
+  {
+    id: 9,
+    name: 'Ecole Mondiale World School',
+  },
+  {
+    id: 10,
+    name: 'Gujarath Bhavan',
+  },
+  {
+    id: 11,
+    name: 'Goa Bhavan',
+  },
+  {
+    id: 12,
+    name: 'CDAC – Centre For Development of Advance Computing',
+  },
+  {
+    id: 13,
+    name: 'Ivy League House (Girls Hostel)',
+  },
+  {
+    id: 14,
+    name: 'Juhu Club Millennium',
+  },
+  {
+    id: 15,
+    name: 'Shree Kalimata Temple',
+  },
+  {
+    id: 16,
+    name: 'Manoranjan Park',
+  },
+]
+
+const normalize = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+export const findCorporationLandmark = (value) => {
+  const target = normalize(value)
+
+  if (!target) {
+    return null
+  }
+
+  const aliases = {
+    'kishore kumar bagh': 1,
+
+    'vijay tendulkar amphitheatre': 2,
+    'vijay tendulkar amphitheater': 2,
+
+    'kaifi azmi park': 3,
+
+    'kamla raheja vidyanidhi institute for architecture environmental studies': 4,
+    'kamla raheja vidyanidhi': 4,
+    'krvia': 4,
+
+    'vrajlal parekh vidyanidhi high school': 5,
+    'vrajlal parekh': 5,
+
+    'manoj kumar garden': 6,
+
+    'smt sb aarya vidya mandir': 7,
+    'sb aarya vidya mandir': 7,
+    'aarya vidya mandir': 7,
+
+    'lokmanya tilak udyan': 8,
+    'tilak udyan': 8,
+
+    'ecole mondiale world school': 9,
+    'ecole mondiale': 9,
+
+    'gujarath bhavan': 10,
+    'gujarat bhavan': 10,
+
+    'goa bhavan': 11,
+
+    'cdac': 12,
+    'centre for development of advance computing': 12,
+    'centre for development of advanced computing': 12,
+
+    'ivy league house': 13,
+    'ivy league house girls hostel': 13,
+
+    'juhu club millennium': 14,
+    'juhu club': 14,
+
+    'shree kalimata temple': 15,
+    'kalimata temple': 15,
+
+    'manoranjan park': 16,
+  }
+
+  const exactId = aliases[target]
+
+  if (exactId) {
+    return CORPORATION_LANDMARKS.find(
+      (item) => item.id === exactId,
+    )
+  }
+
+  const found = CORPORATION_LANDMARKS.find(
+    (item) => {
+      const name = normalize(item.name)
+
+      return (
+        target.includes(name) ||
+        name.includes(target)
+      )
+    },
+  )
+
+  return found ?? null
+}
+
+
 const DEFAULT_CENTER = { lat: 19.105, lng: 72.824 }
 
 const LANDMARK_CATEGORY_IDS = {

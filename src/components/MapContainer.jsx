@@ -21,8 +21,14 @@ import { useLiveLocation } from '../hooks/useLiveLocation'
 import { getText } from '../utils/helpers'
 import FloatingActionBar from './FloatingActionBar'
 import GeoJsonLayer from './GeoJsonLayer'
-import { filterLandmarksGeoJson, filterGeoJsonBySite, getLandmarkCategoryId, getLandmarkCategoryLabel, deriveFeatureCategory, extractLandmarksFromClientBuildings } from '../utils/geoJsonUtils'
-
+import {
+  filterLandmarksGeoJson,
+  filterGeoJsonBySite,
+  getLandmarkCategoryId,
+  getLandmarkCategoryLabel,
+  deriveFeatureCategory,
+  extractLandmarksFromClientBuildings,
+} from '../utils/geoJsonUtils'
 export default function MapContainer() {
   const mapRef = useRef(null)
   const mapWrapperRef = useRef(null)
@@ -48,10 +54,6 @@ export default function MapContainer() {
   const [routeDetails, setRouteDetails] = useState(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  const isTouchDevice =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(pointer: coarse)').matches
-
   /*
    * ==========================================================
    * LANDMARK FILTER
@@ -59,11 +61,35 @@ export default function MapContainer() {
    */
 
   const visibleLandmarks = useMemo(() => {
-    // Derive landmarks from clientBuildings so placement relies on building geometry (source of truth)
-    const derived = extractLandmarksFromClientBuildings(geoJson.clientBuildings || { type: 'FeatureCollection', features: [] })
-    const filteredBySite = geoJson.siteBoundary ? filterGeoJsonBySite(derived, geoJson.siteBoundary) : derived
-    return filterLandmarksGeoJson(filteredBySite, selectedCategory, searchQuery, enabledCategories)
-  }, [geoJson.clientBuildings, geoJson.siteBoundary, selectedCategory, searchQuery, enabledCategories])
+    // Derive normal landmarks from clientBuildings so placement relies
+    // on building geometry as the source of truth.
+    const derived = extractLandmarksFromClientBuildings(
+      geoJson.clientBuildings || {
+        type: 'FeatureCollection',
+        features: [],
+      },
+    )
+
+    const filteredBySite = geoJson.siteBoundary
+      ? filterGeoJsonBySite(
+          derived,
+          geoJson.siteBoundary,
+        )
+      : derived
+
+    return filterLandmarksGeoJson(
+      filteredBySite,
+      selectedCategory,
+      searchQuery,
+      enabledCategories,
+    )
+  }, [
+    geoJson.clientBuildings,
+    geoJson.siteBoundary,
+    selectedCategory,
+    searchQuery,
+    enabledCategories,
+  ])
 
   const clientBuildingsInSite = useMemo(() => (geoJson.siteBoundary && geoJson.clientBuildings) ? filterGeoJsonBySite(geoJson.clientBuildings, geoJson.siteBoundary) : geoJson.clientBuildings, [geoJson.clientBuildings, geoJson.siteBoundary])
 
@@ -72,7 +98,215 @@ export default function MapContainer() {
   const parkPlaygroundInSite = useMemo(() => (geoJson.siteBoundary && geoJson.parkPlayground) ? filterGeoJsonBySite(geoJson.parkPlayground, geoJson.siteBoundary) : geoJson.parkPlayground, [geoJson.parkPlayground, geoJson.siteBoundary])
 
   const openSpacesInSite = useMemo(() => (geoJson.siteBoundary && geoJson.openSpaces) ? filterGeoJsonBySite(geoJson.openSpaces, geoJson.siteBoundary) : geoJson.openSpaces, [geoJson.openSpaces, geoJson.siteBoundary])
+  /*
+   * ==========================================================
+   * CORPORATION LANDMARKS
+   *
+   * 16 official landmarks for:
+   * GULMOHAR, JVPD SCHEME
+   * K/WEST WARD-67
+   *
+   * Their geometry comes from client_buildings.geojson.
+   * ==========================================================
+   */
 
+  const CORPORATION_LANDMARKS = [
+    'Kishore Kumar Bagh',
+    'Vijay Tendulkar Amphitheatre',
+    'Kaifi Azmi Park',
+    'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
+    'Vrajlal Parekh Vidyanidhi High School',
+    'Manoj Kumar Garden',
+    'Smt SB Aarya Vidya Mandir',
+    'Lokmanya Tilak Udyan',
+    'Ecole Mondiale World School',
+    'Gujarath Bhavan',
+    'Goa Bhavan',
+    'CDAC – Centre For Development of Advance Computing',
+    'Ivy League House (Girls Hostel)',
+    'Juhu Club Millennium',
+    'Shree Kalimata Temple',
+    'Manoranjan Park',
+  ]
+
+  const normalizeLandmarkName = (value) => {
+    return String(value ?? '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+  }
+
+  const corporationLandmarks = useMemo(() => {
+    const source =
+      geoJson.clientBuildings || {
+        type: 'FeatureCollection',
+        features: [],
+      }
+
+    if (!Array.isArray(source.features)) {
+      return {
+        type: 'FeatureCollection',
+        features: [],
+      }
+    }
+
+    const aliases = {
+      'kishore kumar bagh': 1,
+
+      'vijay tendulkar amphitheatre': 2,
+      'vijay tendulkar amphitheater': 2,
+
+      'kaifi azmi park': 3,
+
+      'kamla raheja vidyanidhi institute for architecture environmental studies': 4,
+      'kamla raheja vidyanidhi': 4,
+      'krvia': 4,
+
+      'vrajlal parekh vidyanidhi high school': 5,
+      'vrajlal parekh': 5,
+
+      'manoj kumar garden': 6,
+
+      'smt sb aarya vidya mandir': 7,
+      'sb aarya vidya mandir': 7,
+      'aarya vidya mandir': 7,
+
+      'lokmanya tilak udyan': 8,
+      'tilak udyan': 8,
+
+      'ecole mondiale world school': 9,
+      'ecole mondiale': 9,
+
+      'gujarath bhavan': 10,
+      'gujarat bhavan': 10,
+
+      'goa bhavan': 11,
+
+      'cdac': 12,
+      'centre for development of advance computing': 12,
+      'centre for development of advanced computing': 12,
+
+      'ivy league house': 13,
+      'ivy league house girls hostel': 13,
+
+      'juhu club millennium': 14,
+      'juhu club': 14,
+
+      'shree kalimata temple': 15,
+      'kalimata temple': 15,
+
+      'manoranjan park': 16,
+    }
+
+    const features = []
+
+    source.features.forEach((feature) => {
+      const properties =
+        feature?.properties || {}
+
+      const rawName =
+        properties.bldg_namee ??
+        properties.bldg_name ??
+        properties.building_name ??
+        properties.name ??
+        properties.Name ??
+        ''
+
+      const normalized =
+        normalizeLandmarkName(rawName)
+
+      if (!normalized) {
+        return
+      }
+
+      let landmarkNumber =
+        aliases[normalized]
+
+      /*
+       * Partial matching for names containing
+       * extra text.
+       */
+      if (!landmarkNumber) {
+        const aliasEntry =
+          Object.entries(aliases).find(
+            ([alias]) =>
+              normalized.includes(alias) ||
+              alias.includes(normalized),
+          )
+
+        landmarkNumber =
+          aliasEntry?.[1]
+      }
+
+      if (!landmarkNumber) {
+        return
+      }
+
+      const officialName =
+        CORPORATION_LANDMARKS[
+          landmarkNumber - 1
+        ]
+
+      features.push({
+        ...feature,
+
+        properties: {
+          ...properties,
+
+          id:
+            `corporation-landmark-${landmarkNumber}`,
+
+          landmarkNo:
+            landmarkNumber,
+
+          landmarkName:
+            officialName,
+
+          name:
+            officialName,
+
+          category:
+            'corporationLandmark',
+
+          categoryLabel:
+            'Corporation Landmark',
+        },
+      })
+    })
+
+    /*
+     * Remove duplicate matches.
+     */
+    const unique =
+      Array.from(
+        new Map(
+          features.map((feature) => [
+            feature.properties.landmarkNo,
+            feature,
+          ]),
+        ).values(),
+      )
+
+    /*
+     * Keep only features inside the site.
+     */
+    const result = {
+      type: 'FeatureCollection',
+      features: unique,
+    }
+
+    if (geoJson.siteBoundary) {
+      return filterGeoJsonBySite(
+        result,
+        geoJson.siteBoundary,
+      )
+    }
+
+    return result
+  }, [
+    geoJson.clientBuildings,
+    geoJson.siteBoundary,
+  ])
   /*
    * ==========================================================
    * CLEAR ROUTING
@@ -221,17 +455,58 @@ export default function MapContainer() {
    */
 
   useEffect(() => {
-    if (!selectedLandmark || !mapRef.current) {
-      return
-    }
+    if (!selectedLandmark || !mapRef.current) return
 
     const feature = selectedLandmark.feature
-
-    if (!feature) {
-      return
-    }
+    if (!feature) return
 
     try {
+      const destination = getFeatureLatLng(feature)
+
+      // Search -> Bus Stop: exact stop, slight zoom, immediate popup.
+      if (selectedLandmark.sourceCategory === 'busStop' && destination) {
+        mapRef.current.flyTo(
+          [destination.lat, destination.lng],
+          19,
+          { duration: 0.9 }
+        )
+
+        if (selectedLandmark.fromSearch !== false) {
+          const props = feature?.properties || {}
+
+          const stopNo =
+            props.No ?? props.no ??
+            props.Number ?? props.number ??
+            props.stop_no ?? props.stopNo ?? ''
+
+          const stopName =
+            props.Name ?? props.name ?? props.NAME ??
+            props.stop_name ?? props.stopName ??
+            selectedLandmark.name ?? 'Bus Stop'
+
+          const cleanNo = String(stopNo ?? '').trim()
+          const cleanName = String(stopName ?? '').trim()
+
+          const popupContent = `
+            <div style="font-family:system-ui,sans-serif;min-width:230px;line-height:1.5;color:#0f172a;">
+              <div style="font-size:17px;font-weight:800;margin-bottom:9px;color:#1d4ed8;">Bus Stop</div>
+              ${cleanNo ? `<div style="font-size:14px;margin-bottom:6px;"><strong>Stop No:</strong> ${cleanNo}</div>` : ''}
+              <div style="font-size:14px;"><strong>Name:</strong><br/>${cleanName || 'Bus Stop'}</div>
+            </div>
+          `
+
+          L.popup({ maxWidth: 320, closeButton: true })
+            .setLatLng([destination.lat, destination.lng])
+            .setContent(popupContent)
+            .openOn(mapRef.current)
+
+          setSelectedLandmark({ ...selectedLandmark, fromSearch: false })
+        }
+
+        return
+      }
+
+      // Search -> polygon: fit the actual feature and open popup.
       if (
         feature.geometry?.type === 'Polygon' ||
         feature.geometry?.type === 'MultiPolygon'
@@ -246,74 +521,100 @@ export default function MapContainer() {
             animate: true,
           })
 
-          // If this selection originated from the search, open a Leaflet popup for the building
-          try {
-            if (selectedLandmark.fromSearch) {
-              const buildingName = selectedLandmark.bldg_namee || selectedLandmark.name || 'Unnamed Building'
-              const buildingNo = selectedLandmark.bldg_no ?? selectedLandmark.description ?? 'Not assigned'
+          if (selectedLandmark.fromSearch !== false) {
+            const props = feature?.properties || {}
+            const buildingName =
+              props.bldg_namee ??
+              selectedLandmark.bldg_namee ??
+              selectedLandmark.name ??
+              'Unnamed Building'
+            const buildingNo =
+              props.bldg_no ??
+              selectedLandmark.bldg_no ??
+              selectedLandmark.description ??
+              ''
 
-              const popupContent = `
-                <div style="font-family: system-ui, sans-serif; min-width: 230px; line-height: 1.5; color: #0f172a;">
-                  <div style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Building Details</div>
-                  <div style="font-size: 14px; margin-bottom: 8px;"><strong>Building Name:</strong><br/>${buildingName || 'Unnamed Building'}</div>
-                  <div style="font-size: 14px; margin-bottom: 12px;"><strong>Building No:</strong><br/>${buildingNo ?? 'Not assigned'}</div>
-                  <a href="https://www.google.com/maps/search/?api=1&query=${bounds.getCenter().lat},${bounds.getCenter().lng}" target="_blank" rel="noopener noreferrer" style="display:block; width:100%; box-sizing:border-box; text-align:center; text-decoration:none; background:#009f91; color:#fff; padding:10px 14px; border-radius:12px; font-size:14px; font-weight:600;">Open in Google Maps</a>
+            const googleMapsUrl =
+              `https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}`
+
+            const popupContent = `
+              <div style="font-family:system-ui,sans-serif;min-width:240px;line-height:1.5;color:#0f172a;">
+                <div style="font-size:17px;font-weight:800;margin-bottom:10px;">
+                  Building Details
                 </div>
-              `
+                <div style="font-size:14px;margin-bottom:7px;">
+                  <strong>Building Name:</strong><br/>
+                  ${buildingName || 'Unnamed Building'}
+                </div>
+                ${
+                  buildingNo
+                    ? `<div style="font-size:14px;margin-bottom:14px;">
+                        <strong>Building No:</strong><br/>
+                        ${buildingNo}
+                      </div>`
+                    : ''
+                }
+                <a
+                  href="${googleMapsUrl}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="
+                    display:block;
+                    width:100%;
+                    box-sizing:border-box;
+                    text-align:center;
+                    text-decoration:none;
+                    background:#009f91;
+                    color:white;
+                    padding:11px 14px;
+                    border-radius:12px;
+                    font-size:14px;
+                    font-weight:700;
+                  "
+                >
+                  Open in Google Maps
+                </a>
+              </div>
+            `
 
-              L.popup({ maxWidth: 320, closeButton: true }).setLatLng(bounds.getCenter()).setContent(popupContent).openOn(mapRef.current)
+            L.popup({ maxWidth: 320, closeButton: true })
+              .setLatLng(bounds.getCenter())
+              .setContent(popupContent)
+              .openOn(mapRef.current)
 
-              // clear the flag to avoid reopening repeatedly
-              setSelectedLandmark({ ...selectedLandmark, fromSearch: false })
-            }
-          } catch (e) {
-            // ignore popup errors
+            setSelectedLandmark({ ...selectedLandmark, fromSearch: false })
           }
 
           return
         }
       }
 
-      const destination =
-        getFeatureLatLng(feature)
-
+      // Other point/landmark search.
       if (destination) {
         mapRef.current.flyTo(
-          [
-            destination.lat,
-            destination.lng,
-          ],
-          18,
-          {
-            duration: 1,
-          }
+          [destination.lat, destination.lng],
+          18.5,
+          { duration: 1 }
         )
 
-        // open popup if selection came from search and no polygon bounds
-        try {
-          if (selectedLandmark.fromSearch) {
-            const buildingName = selectedLandmark.bldg_namee || selectedLandmark.name || 'Unnamed Building'
-            const buildingNo = selectedLandmark.bldg_no ?? selectedLandmark.description ?? 'Not assigned'
-            const popupContent = `
-              <div style="font-family: system-ui, sans-serif; min-width: 230px; line-height: 1.5; color: #0f172a;">
-                <div style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Building Details</div>
-                <div style="font-size: 14px; margin-bottom: 8px;"><strong>Building Name:</strong><br/>${buildingName || 'Unnamed Building'}</div>
-                <div style="font-size: 14px; margin-bottom: 12px;"><strong>Building No:</strong><br/>${buildingNo ?? 'Not assigned'}</div>
-              <a href="https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}" target="_blank" rel="noopener noreferrer" style="display:block; width:100%; box-sizing:border-box; text-align:center; text-decoration:none; background:#009f91; color:#fff; padding:10px 14px; border-radius:12px; font-size:14px; font-weight:600;">Open in Google Maps</a>
-              </div>
-            `
-            L.popup({ maxWidth: 320, closeButton: true }).setLatLng([destination.lat, destination.lng]).setContent(popupContent).openOn(mapRef.current)
-            setSelectedLandmark({ ...selectedLandmark, fromSearch: false })
-          }
-        } catch (e) {
-          // ignore
+        if (selectedLandmark.fromSearch !== false) {
+          const popupContent = `
+            <div style="font-family:system-ui,sans-serif;min-width:220px;line-height:1.5;color:#0f172a;">
+              <div style="font-size:16px;font-weight:800;margin-bottom:7px;">${selectedLandmark.name || 'Location'}</div>
+              <div style="font-size:13px;">${selectedLandmark.description || ''}</div>
+            </div>
+          `
+
+          L.popup({ maxWidth: 300, closeButton: true })
+            .setLatLng([destination.lat, destination.lng])
+            .setContent(popupContent)
+            .openOn(mapRef.current)
+
+          setSelectedLandmark({ ...selectedLandmark, fromSearch: false })
         }
       }
     } catch (error) {
-      console.error(
-        'Unable to focus selected feature:',
-        error
-      )
+      console.error('Unable to focus selected feature:', error)
     }
   }, [selectedLandmark])
 
@@ -511,80 +812,31 @@ export default function MapContainer() {
    * ==========================================================
    */
 
-  const handleBuildingClick = (feature) => {
+ const handleBuildingClick = (feature) => {
     const properties = feature?.properties || {}
+    const destination = getFeatureLatLng(feature)
 
-    // Use exact properties from client_buildings.geojson
-    const rawName = properties.bldg_namee
-    const rawNo = properties.bldg_no
-
-    const buildingName = (rawName !== undefined && rawName !== null && String(rawName).trim() !== '') ? String(rawName).trim() : 'Unnamed Building'
-    const buildingNo = (rawNo !== undefined && rawNo !== null && String(rawNo).trim() !== '') ? String(rawNo) : 'Not assigned'
-    /*
-     * IMPORTANT:
-     * Get the actual center from the polygon.
-     */
-
-    let destination = null
-
-    try {
-      const layer =
-        L.geoJSON(feature)
-
-      const bounds =
-        layer.getBounds()
-
-      if (bounds.isValid()) {
-        destination =
-          bounds.getCenter()
-
-        mapRef.current?.fitBounds(
-          bounds,
-          {
-            padding: [40, 40],
-            maxZoom: 19,
-            animate: true,
-          }
-        )
-      }
-    } catch (error) {
-      console.error(
-        'Unable to locate building:',
-        error
-      )
-    }
-
-    if (!destination) {
-      destination =
-        getFeatureLatLng(feature)
-    }
-
-    if (!destination) {
-      setToast({
-        en: 'Unable to determine this building location.',
-        mr: 'या इमारतीचे स्थान निश्चित करता आले नाही.',
-      })
-
+    if (!destination || !mapRef.current) {
       return
     }
 
     clearRouting()
 
-    if (mapRef.current) {
-      mapRef.current.closePopup()
-    }
+    const buildingName =
+      properties.bldg_namee ??
+      properties.bldg_name ??
+      properties.building_name ??
+      properties.name ??
+      properties.Name ??
+      'Unnamed Building'
 
-    const finalName =
-      buildingName ||
-      (
-        buildingNo
-          ? `Building ${buildingNo}`
-          : 'Building'
-      )
-
-    /*
-     * UNIQUE ID
-     */
+    const buildingNo =
+      properties.bldg_no ??
+      properties.building_no ??
+      properties.buildingNo ??
+      properties.No ??
+      properties.no ??
+      ''
 
     const id =
       properties.fid_1 ??
@@ -593,126 +845,92 @@ export default function MapContainer() {
       properties.ID ??
       `building-${destination.lat}-${destination.lng}`
 
-    /*
-     * SELECTED BUILDING
-     */
-
-    const derivedCategoryId = feature?.properties?.derivedCategory ?? deriveFeatureCategory(feature, 'clientBuildings')
-    const derivedCategoryLabel = getLandmarkCategoryLabel(derivedCategoryId)
-
-    const selected = {
+    setSelectedLandmark({
       id,
-
-      name: finalName,
-
-      road:
-        properties.road ??
-        properties.address ??
-        '',
-
-      category:
-        derivedCategoryLabel,
-
-      sourceCategory:
-        'building',
-
-      latitude:
-        destination.lat,
-
-      longitude:
-        destination.lng,
-
-      description:
-        buildingName ||
-        finalName,
-
-      address:
-        properties.address ??
-        properties.road ??
-        '',
-
-      image:
-        properties.image ??
-        null,
-
-      rating:
-        properties.rating ??
-        4.6,
-
-      steps:
-        properties.steps ??
-        [],
-
-      buildingNo,
-
-      buildingName,
-
+      name: buildingName,
+      road: properties.road ?? properties.address ?? '',
+      category: 'Building',
+      sourceCategory: 'building',
+      latitude: destination.lat,
+      longitude: destination.lng,
+      description: buildingName,
+      bldg_namee: buildingName,
+      bldg_no: buildingNo,
+      address: properties.address ?? properties.road ?? '',
+      image: null,
+      rating: properties.rating ?? 4.6,
+      steps: properties.steps ?? [],
       feature,
+    })
+
+    let popupLatLng = destination
+
+    if (
+      feature?.geometry?.type === 'Polygon' ||
+      feature?.geometry?.type === 'MultiPolygon'
+    ) {
+      try {
+        const layer = L.geoJSON(feature)
+        const bounds = layer.getBounds()
+
+        if (bounds.isValid()) {
+          mapRef.current.fitBounds(bounds, {
+            padding: [40, 40],
+            maxZoom: 19,
+            animate: true,
+          })
+          popupLatLng = bounds.getCenter()
+        }
+      } catch (error) {
+        console.warn('Unable to fit building:', error)
+      }
+    } else {
+      mapRef.current.flyTo(
+        [destination.lat, destination.lng],
+        19,
+        { duration: 0.8 }
+      )
     }
 
-    setSelectedLandmark(
-      selected
-    )
-
-    /*
-     * POPUP
-     */
+    const googleMapsUrl =
+      `https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}`
 
     const popupContent = `
-      <div
-        style="
-          font-family: system-ui, sans-serif;
-          min-width: 230px;
-          line-height: 1.5;
-          color: #0f172a;
-        "
-      >
-        <div
-          style="
-            font-size: 17px;
-            font-weight: 700;
-            margin-bottom: 10px;
-          "
-        >
+      <div style="font-family:system-ui,sans-serif;min-width:240px;line-height:1.5;color:#0f172a;">
+        <div style="font-size:17px;font-weight:800;margin-bottom:10px;">
           Building Details
         </div>
 
-        <div
-          style="
-            font-size: 14px;
-            margin-bottom: 8px;
-          "
-        >
+        <div style="font-size:14px;margin-bottom:8px;">
           <strong>Building Name:</strong><br/>
           ${buildingName}
         </div>
 
-        <div
-          style="
-            font-size: 14px;
-            margin-bottom: 12px;
-          "
-        >
-          <strong>Building No:</strong><br/>
-          ${buildingNo}
-        </div>
+        ${
+          String(buildingNo).trim()
+            ? `<div style="font-size:14px;margin-bottom:14px;">
+                <strong>Building No:</strong><br/>
+                ${buildingNo}
+              </div>`
+            : ''
+        }
 
         <a
-          href="https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}"
+          href="${googleMapsUrl}"
           target="_blank"
           rel="noopener noreferrer"
           style="
-            display: block;
-            width: 100%;
-            box-sizing: border-box;
-            text-align: center;
-            text-decoration: none;
-            background: #009f91;
-            color: white;
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
+            display:block;
+            width:100%;
+            box-sizing:border-box;
+            text-align:center;
+            text-decoration:none;
+            background:#009f91;
+            color:white;
+            padding:11px 14px;
+            border-radius:12px;
+            font-size:14px;
+            font-weight:700;
           "
         >
           Open in Google Maps
@@ -724,28 +942,15 @@ export default function MapContainer() {
       maxWidth: 320,
       closeButton: true,
     })
-      .setLatLng([
-        destination.lat,
-        destination.lng,
-      ])
-      .setContent(
-        popupContent
-      )
-      .openOn(
-        mapRef.current
-      )
+      .setLatLng([popupLatLng.lat, popupLatLng.lng])
+      .setContent(popupContent)
+      .openOn(mapRef.current)
 
     setToast({
-      en: `${finalName} selected`,
-      mr: `${finalName} निवडले`,
+      en: `${buildingName} selected`,
+      mr: `${buildingName} निवडले`,
     })
   }
-
-  /*
-   * ==========================================================
-   * BUS STOP CLICK
-   * ==========================================================
-   */
 
   const handleBusStopClick =
     (feature) => {
@@ -779,7 +984,20 @@ export default function MapContainer() {
         properties.Name ??
         properties.name ??
         properties.NAME ??
+        properties.stop_name ??
+        properties.stopName ??
         'Bus Stop'
+
+      const stopNo =
+        properties.No ??
+        properties.no ??
+        properties.Number ??
+        properties.number ??
+        properties.stop_no ??
+        properties.stopNo ??
+        properties.Stop_No ??
+        properties.STOP_NO ??
+        ''
 
       clearRouting()
 
@@ -806,6 +1024,9 @@ export default function MapContainer() {
         description:
           name,
 
+        stopNo,
+        busStopNo: stopNo,
+
         address: '',
 
         image: null,
@@ -826,56 +1047,27 @@ export default function MapContainer() {
           latitude,
           longitude,
         ],
-        18,
+        19,
         {
-          duration: 1,
+          duration: 0.9,
         }
       )
 
-      const popupContent = `
-        <div
-          style="
-            font-family: system-ui, sans-serif;
-            min-width: 200px;
-            line-height: 1.5;
-            color: #0f172a;
-          "
-        >
-          <div
-            style="
-              font-size: 16px;
-              font-weight: 700;
-              margin-bottom: 8px;
-            "
-          >
-            Bus Stop
-          </div>
+      const cleanNo = String(stopNo ?? '').trim()
+      const cleanName = String(name ?? '').trim()
 
-          <div
-            style="
-              font-size: 14px;
-            "
-          >
-            <strong>Name:</strong><br/>
-            ${name}
-          </div>
+      const popupContent = `
+        <div style="font-family:system-ui,sans-serif;min-width:220px;line-height:1.5;color:#0f172a;">
+          <div style="font-size:17px;font-weight:800;margin-bottom:9px;color:#1d4ed8;">Bus Stop</div>
+          ${cleanNo ? `<div style="font-size:14px;margin-bottom:6px;"><strong>Stop No:</strong> ${cleanNo}</div>` : ''}
+          <div style="font-size:14px;"><strong>Name:</strong><br/>${cleanName || 'Bus Stop'}</div>
         </div>
       `
 
-      L.popup({
-        maxWidth: 300,
-        closeButton: true,
-      })
-        .setLatLng([
-          latitude,
-          longitude,
-        ])
-        .setContent(
-          popupContent
-        )
-        .openOn(
-          mapRef.current
-        )
+      L.popup({ maxWidth: 320, closeButton: true })
+        .setLatLng([latitude, longitude])
+        .setContent(popupContent)
+        .openOn(mapRef.current)
 
       setToast({
         en: `${name} selected`,
@@ -1397,10 +1589,7 @@ export default function MapContainer() {
           ref={mapWrapperRef}
           className="relative w-full bg-slate-100 h-[clamp(360px,62vw,560px)] sm:h-[420px] lg:h-[520px] xl:h-[560px]"
           style={{
-            touchAction:
-              isTouchDevice
-                ? 'pan-y pinch-zoom'
-                : 'auto',
+            touchAction: 'auto',
           }}
         >
           {loading && (
@@ -1435,18 +1624,11 @@ export default function MapContainer() {
               center.lng,
             ]}
             zoom={16}
-            scrollWheelZoom={
-              !isTouchDevice
-            }
-            dragging={
-              !isTouchDevice
-            }
-            touchZoom={
-              !isTouchDevice
-            }
-            doubleClickZoom={
-              !isTouchDevice
-            }
+            scrollWheelZoom={true}
+            dragging={true}
+            touchZoom={true}
+            doubleClickZoom={true}
+            zoomControl={true}
             className="h-full w-full"
             whenCreated={(map) => {
               mapRef.current =
@@ -1458,21 +1640,29 @@ export default function MapContainer() {
                 SATELLITE BASE MAP
                ================================================= */}
 
-            <TileLayer
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              attribution="Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
-            />
+        <TileLayer
+  url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+  maxZoom={19}
+  attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+/>
 
             {/* =================================================
                 OPEN SPACES
                ================================================= */}
 
-            {openSpacesInSite && (
+            {/* =================================================
+                SITE BOUNDARY
+
+                Render the boundary BEFORE buildings. This keeps the
+                transparent boundary underneath the building polygons
+                so it cannot intercept building clicks.
+               ================================================= */}
+
+            {geoJson.siteBoundary && (
               <GeoJsonLayer
-  featureData={geoJson.clientBuildings}
-  layerKey="buildings"
-  onFeatureClick={handleBuildingClick}
-/>
+                featureData={geoJson.siteBoundary}
+                layerKey="siteBoundary"
+              />
             )}
 
             {/* =================================================
@@ -1486,13 +1676,226 @@ export default function MapContainer() {
                 - bldg_no
                 - polygon coordinates
                ================================================= */}
+{/* BUILDINGS */}
+{clientBuildingsInSite && (
+  <GeoJsonLayer
+    featureData={clientBuildingsInSite}
+    layerKey="clientBuildings"
+    activeFeatureId={selectedLandmark?.id}
+    onFeatureClick={handleBuildingClick}
+  />
+)}
 
-            {clientBuildingsInSite && (
+{/* PLAYGROUND / PARK */}
+{parkPlaygroundInSite && (
+  <GeoJsonLayer
+    featureData={parkPlaygroundInSite}
+    layerKey="parkPlayground"
+  />
+)}
+
+{/* BUS STOPS */}
+{/* your existing code — DON'T CHANGE */}            {/* =================================================
+                CORPORATION LANDMARKS
+
+                16 official landmarks
+               ================================================= */}
+
+            {corporationLandmarks?.features?.length > 0 && (
               <GeoJsonLayer
-                featureData={clientBuildingsInSite}
-                layerKey="clientBuildings"
-                activeFeatureId={selectedLandmark?.id}
-                onFeatureClick={handleBuildingClick}
+                featureData={corporationLandmarks}
+                layerKey="landmarks"
+                showLabels={
+                  selectedCategory === 'landmark' ||
+                  selectedCategory === 'landmarks'
+                }
+                activeFeatureId={
+                  selectedLandmark?.id
+                }
+                onFeatureClick={(feature) => {
+                  clearRouting()
+
+                  const properties =
+                    feature?.properties || {}
+
+                  const destination =
+                    getFeatureLatLng(feature)
+
+                  if (!destination) {
+                    setToast({
+                      en: 'Unable to determine landmark location.',
+                      mr: 'लँडमार्कचे स्थान निश्चित करता आले नाही.',
+                    })
+
+                    return
+                  }
+
+                  const landmarkName =
+                    properties.landmarkName ??
+                    properties.name ??
+                    'Corporation Landmark'
+
+                  const landmarkNo =
+                    properties.landmarkNo ??
+                    '—'
+
+                  const selected = {
+                    id:
+                      properties.id ??
+                      `landmark-${landmarkNo}`,
+
+                    name:
+                      landmarkName,
+
+                    road:
+                      properties.road ??
+                      properties.address ??
+                      '',
+
+                    category:
+                      'Corporation Landmark',
+
+                    sourceCategory:
+                      'corporationLandmark',
+
+                    landmarkNo,
+
+                    latitude:
+                      destination.lat,
+
+                    longitude:
+                      destination.lng,
+
+                    description:
+                      landmarkName,
+
+                    address:
+                      properties.address ??
+                      properties.road ??
+                      '',
+
+                    image: null,
+
+                    rating: 4.6,
+
+                    steps: [],
+
+                    feature,
+                  }
+
+                  setSelectedLandmark(
+                    selected,
+                  )
+
+                  /*
+                   * Zoom to landmark.
+                   */
+                  mapRef.current?.flyTo(
+                    [
+                      destination.lat,
+                      destination.lng,
+                    ],
+                    18,
+                    {
+                      duration: 0.8,
+                    },
+                  )
+
+                  /*
+                   * Google Maps URL.
+                   */
+                  const googleMapsUrl =
+                    `https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}`
+
+                  /*
+                   * Popup.
+                   */
+                  const popupContent = `
+                    <div
+                      style="
+                        font-family:system-ui,sans-serif;
+                        min-width:240px;
+                        line-height:1.5;
+                        color:#0f172a;
+                      "
+                    >
+
+                      <div
+                        style="
+                          font-size:17px;
+                          font-weight:800;
+                          margin-bottom:12px;
+                        "
+                      >
+                        Corporation Landmark
+                      </div>
+
+                      <div
+                        style="
+                          font-size:14px;
+                          margin-bottom:8px;
+                        "
+                      >
+                        <strong>Landmark No:</strong>
+                        ${landmarkNo}
+                      </div>
+
+                      <div
+                        style="
+                          font-size:14px;
+                          margin-bottom:14px;
+                        "
+                      >
+                        <strong>Name:</strong><br/>
+                        ${landmarkName}
+                      </div>
+
+                      <a
+                        href="${googleMapsUrl}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style="
+                          display:block;
+                          width:100%;
+                          box-sizing:border-box;
+                          text-align:center;
+                          text-decoration:none;
+                          background:#009f91;
+                          color:white;
+                          padding:11px 14px;
+                          border-radius:12px;
+                          font-size:14px;
+                          font-weight:700;
+                        "
+                      >
+                        Open in Google Maps
+                      </a>
+
+                    </div>
+                  `
+
+                  if (mapRef.current) {
+                    L.popup({
+                      maxWidth: 320,
+                      closeButton: true,
+                    })
+                      .setLatLng([
+                        destination.lat,
+                        destination.lng,
+                      ])
+                      .setContent(
+                        popupContent,
+                      )
+                      .openOn(
+                        mapRef.current,
+                      )
+                  }
+
+                  setToast({
+                    en: `${landmarkName} selected`,
+                    mr: `${landmarkName} निवडले`,
+                  })
+                }}
               />
             )}
 
@@ -1519,64 +1922,15 @@ export default function MapContainer() {
             {(selectedCategory === 'all' || selectedCategory === 'busStop' || enabledCategories.includes('busStop')) &&
               busStopsInSite && (
                 <GeoJsonLayer
-                  featureData={busStopsInSite}
-                  layerKey="busStops"
-                  activeFeatureId={selectedLandmark?.id}
-                  onFeatureClick={handleBusStopClick}
-                />
+  featureData={busStopsInSite}
+  layerKey="busStops"
+  activeFeatureId={selectedLandmark?.id}
+  showLabels={selectedCategory === 'busStop'}
+  onFeatureClick={handleBusStopClick}
+/>
               )}
 
-            {/* =================================================
-                LANDMARKS
-               ================================================= */}
-
-            {visibleLandmarks && (
-              <GeoJsonLayer
-                featureData={visibleLandmarks}
-                layerKey="landmarks"
-                activeFeatureId={selectedLandmark?.id}
-                onFeatureClick={(feature) => {
-                  clearRouting()
-
-                  const properties = feature?.properties || {}
-
-                  const destination = getFeatureLatLng(feature)
-
-                  if (!destination) {
-                    setToast({ en: 'Unable to determine landmark location.', mr: 'लँडमार्कचे स्थान निश्चित करता आले नाही.' })
-                    return
-                  }
-
-                  const selected = {
-                    id: properties.id ?? `${destination.lat}-${destination.lng}`,
-                    name: properties.name ?? properties.Name ?? 'Unknown place',
-                    road: properties.road ?? properties.address ?? '',
-                    category: properties.category ?? 'Landmark',
-                    sourceCategory: getLandmarkCategoryId(properties.category),
-                    latitude: destination.lat,
-                    longitude: destination.lng,
-                    description: properties.description ?? properties.name ?? properties.Name ?? '',
-                    image: properties.image ?? null,
-                    address: properties.address ?? properties.road ?? '',
-                    rating: properties.rating ?? 4.6,
-                    steps: properties.steps ?? [],
-                    feature,
-                  }
-
-                  setSelectedLandmark(selected)
-
-                  mapRef.current?.flyTo([destination.lat, destination.lng], 18, { duration: 1 })
-
-                  setToast({ en: `Focused on ${selected.name}`, mr: `${selected.name}कडे केंद्रित केले` })
-                }}
-              />
-            )}
-
-            {/* =================================================
-                SITE BOUNDARY
-               ================================================= */}
-
-            {geoJson.siteBoundary && <GeoJsonLayer featureData={geoJson.siteBoundary} layerKey="siteBoundary" />}
+            {/* Landmark point markers are intentionally hidden. Building polygons are the clickable map features. */}
 
             {/* =================================================
                 CURRENT GPS LOCATION
