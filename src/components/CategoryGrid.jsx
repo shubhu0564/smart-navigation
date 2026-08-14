@@ -42,7 +42,7 @@ export default function CategoryGrid() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {categories.map((category) => {
         const Icon = Icons[category.icon] ?? Icons.Compass
         const active = selectedCategory === category.id
@@ -52,15 +52,15 @@ export default function CategoryGrid() {
             whileTap={{ scale: 0.98 }}
             key={category.id}
             onClick={() => handleCategoryClick(category.id)}
-            className={`rounded-[24px] border p-4 text-left shadow-sm transition duration-200 ${active ? 'border-teal-600 bg-teal-600 text-white shadow-lg' : darkMode ? 'border-slate-800 bg-slate-900/60 text-slate-200 hover:border-slate-500 hover:bg-slate-900' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'}`}
+            className={`rounded-[16px] border p-2 text-left shadow-sm transition duration-200 sm:rounded-[24px] sm:p-4 ${active ? 'border-teal-600 bg-teal-600 text-white shadow-lg' : darkMode ? 'border-slate-800 bg-slate-900/60 text-slate-200 hover:border-slate-500 hover:bg-slate-900' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'}`}
           >
-            <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-2xl ${active ? 'bg-white/20 text-white' : 'bg-teal-600/10 text-teal-600'}`}>
-              <Icon size={20} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg sm:mb-3 sm:h-11 sm:w-11 sm:rounded-2xl ${active ? 'bg-white/20 text-white' : 'bg-teal-600/10 text-teal-600'}`}>
+              <Icon size={16} className="sm:h-5 sm:w-5" />
             </div>
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold leading-5">{getText(category.label, language)}</p>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <p className="text-xs font-semibold leading-4 sm:text-sm sm:leading-5">{getText(category.label, language)}</p>
               {category.count > 0 ? (
-                <span className="text-xs font-medium text-slate-500">({category.count})</span>
+                <span className="text-[10px] font-medium text-slate-500 sm:text-xs">({category.count})</span>
               ) : null}
             </div>
           </motion.button>
