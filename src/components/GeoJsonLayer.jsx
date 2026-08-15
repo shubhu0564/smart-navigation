@@ -26,21 +26,21 @@ const styles = {
     opacity: 0.9,
   },
 
-buildings: {
-  color: '#000000',
-  weight: 1.5,
-  opacity: 1,
-  fillColor: '#000000',
-  fillOpacity: 0.65,
-},
+  buildings: {
+    color: '#000000',
+    weight: 1.5,
+    opacity: 1,
+    fillColor: '#000000',
+    fillOpacity: 0.9,
+  },
 
-clientBuildings: {
-  color: '#000000',
-  weight: 1.2,
-  opacity: 1,
-  fillColor: '#000000',
-  fillOpacity: 0.65,
-},
+  clientBuildings: {
+    color: '#000000',
+    weight: 1.5,
+    opacity: 1,
+    fillColor: '#000000',
+    fillOpacity: 0.9,
+  },
 
   openSpaces: {
     color: '#16a34a',
@@ -204,50 +204,56 @@ export default function GeoJsonLayer({
     `
   }
 
-  const getFeatureId = (feature) => {
-    return (
-      feature?.properties?.id ??
-      feature?.properties?.bldg_no ??
-      feature?.properties?.fid_1 ??
-      ''
-    )
+  const getFeatureIds = (feature) => {
+    const props = feature?.properties || {}
+
+    return [
+      props.fid_1,
+      props.fid,
+      props.id,
+      props.ID,
+      props.bldg_no,
+      props.building_no,
+      props.buildingNo,
+    ]
+      .filter((value) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map((value) => String(value))
+  }
+
+  const isFeatureSelected = (feature) => {
+    if (activeFeatureId == null) return false
+
+    const activeId = String(activeFeatureId)
+    return getFeatureIds(feature).some((id) => id === activeId)
+  }
+
+  const getFeatureStyle = (feature) => {
+    const isSelected = isFeatureSelected(feature)
+
+    if (isSelected && (layerKey === 'buildings' || layerKey === 'clientBuildings')) {
+      return {
+        color: '#b91c1c',
+        weight: 3,
+        opacity: 1,
+        fillColor: '#ef4444',
+        fillOpacity: 1,
+      }
+    }
+
+    return style
   }
 
   const pointToLayer = (feature, latlng) => {
     // Bus stops use Leaflet's fixed default marker icon.
-   // BUS STOP ICON
-if (layerKey === 'busStops') {
-  return L.marker(latlng, {
-    icon: L.divIcon({
-      className: 'bus-stop-green-icon',
-      html: `
-        <div
-          class="${showLabels ? 'bus-stop-blink' : ''}"
-          style="
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: #16a34a;
-            border: 3px solid white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 19px;
-            line-height: 1;
-          "
-        >
-          🚌
-        </div>
-      `,
-
-      iconSize: [34, 34],
-      iconAnchor: [17, 17],
-      popupAnchor: [0, -18],
-    }),
-  })
-}
- 
+    if (layerKey === 'busStops') {
+      return L.circleMarker(latlng, {
+        radius: 6,
+        color: '#2563eb',
+        fillColor: '#60a5fa',
+        fillOpacity: 0.95,
+        weight: 2,
+      })
+    }
 
     // Landmarks are not rendered as point icons in the main map.
     // Buildings are the primary clickable map features.
@@ -273,81 +279,27 @@ if (layerKey === 'busStops') {
     // Only buildings should produce the building information popup.
     if (layerKey === 'buildings' || layerKey === 'clientBuildings') {
       layer.bindPopup(
-        
         renderPopupContent(feature),
         {
           maxWidth: 320,
           closeButton: true,
         }
       )
-   } else if (layerKey === 'parkPlayground') {
-  const props = feature?.properties || {}
+    } else if (layerKey === 'parkPlayground') {
+      const rawName =
+        feature?.properties?.Name ??
+        feature?.properties?.name ??
+        feature?.properties?.NAME
 
-  const playgroundName =
-    props.Name ??
-    props.name ??
-    props.NAME ??
-    props.landmarkName ??
-    'Playground'
+      const rawNo =
+        feature?.properties?.Number ??
+        feature?.properties?.number ??
+        feature?.properties?.No ??
+        feature?.properties?.NO
 
-  const playgroundNo =
-    props.Number ??
-    props.number ??
-    props.No ??
-    props.no ??
-    ''
+      // Park/playground names are NOT displayed permanently on the map.
+      // They are shown only inside the popup after a click.
 
-  const cleanName = String(playgroundName ?? '').trim()
-  const cleanNo = String(playgroundNo ?? '').trim()
-
-  // NO PERMANENT LABEL
-  // Playground name/number will appear ONLY after clicking.
-  layer.bindPopup(
-    `
-      <div style="
-        font-family: system-ui, sans-serif;
-        min-width: 240px;
-        line-height: 1.5;
-        color: #0f172a;
-      ">
-
-        <div style="
-          font-size: 17px;
-          font-weight: 800;
-          margin-bottom: 12px;
-        ">
-          Park / Playground
-        </div>
-
-        <div style="
-          font-size: 14px;
-          margin-bottom: 8px;
-        ">
-          <strong>Name:</strong><br/>
-          ${cleanName || 'Playground'}
-        </div>
-
-        ${
-          cleanNo
-            ? `
-              <div style="
-                font-size: 14px;
-                margin-bottom: 14px;
-              ">
-                <strong>No:</strong><br/>
-                ${cleanNo}
-              </div>
-            `
-            : ''
-        }
-
-      </div>
-    `,
-    {
-      maxWidth: 320,
-      closeButton: true,
-    }
-  )
       layer.bindPopup(
         renderPopupContent(feature),
         {
@@ -379,35 +331,6 @@ if (layerKey === 'busStops') {
 
       const cleanName = String(name ?? '').trim()
       const cleanNo = String(stopNo ?? '').trim()
-
-      if (showLabels && (cleanName || cleanNo)) {
-        layer.bindTooltip(
-          `<div style="
-            font-family: system-ui, sans-serif;
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1.2;
-            color: #0f172a;
-            background: rgba(255,255,255,0.96);
-            border: 1px solid #2563eb;
-            border-radius: 8px;
-            padding: 4px 7px;
-            box-shadow: 0 2px 7px rgba(0,0,0,0.22);
-            white-space: nowrap;
-          ">
-            ${cleanNo ? `<span style="color:#1d4ed8;">No. ${cleanNo}</span> · ` : ''}
-            ${cleanName || 'Bus Stop'}
-          </div>`,
-          {
-            permanent: true,
-            direction: 'top',
-            offset: [0, -8],
-            className: 'bus-stop-map-label',
-            opacity: 1,
-            interactive: false,
-          }
-        )
-      }
 
       layer.bindPopup(
         `<div style="
@@ -444,34 +367,7 @@ if (layerKey === 'busStops') {
       const cleanName = String(landmarkName ?? '').trim()
       const cleanNo = String(landmarkNo ?? '').trim()
 
-      if (showLabels && (cleanName || cleanNo)) {
-        layer.bindTooltip(
-          `<div style="
-            font-family: system-ui, sans-serif;
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1.2;
-            color: #0f172a;
-            background: rgba(255,255,255,0.96);
-            border: 1px solid #0f766e;
-            border-radius: 8px;
-            padding: 4px 7px;
-            box-shadow: 0 2px 7px rgba(0,0,0,0.22);
-            white-space: nowrap;
-          ">
-            ${cleanNo ? `<span style="color:#0f766e;">No. ${cleanNo}</span> · ` : ''}
-            ${cleanName || 'Landmark'}
-          </div>`,
-          {
-            permanent: true,
-            direction: 'top',
-            offset: [0, -8],
-            className: 'landmark-map-label',
-            opacity: 1,
-            interactive: false,
-          }
-        )
-      }
+      // Landmark names are NOT displayed permanently on the map.
 
       layer.bindPopup(
         renderPopupContent(feature),
@@ -502,50 +398,35 @@ if (layerKey === 'busStops') {
 
       mouseover: () => {
         if (layerKey === 'buildings' || layerKey === 'clientBuildings') {
-          layer.setStyle?.({
-            color: '#f97316',
-            weight: 3,
-            fillColor: '#a78bfa',
-            fillOpacity: 0.85,
-          })
+          const isSelected = isFeatureSelected(feature)
+
+          layer.setStyle?.(
+            isSelected
+              ? {
+                  color: '#b91c1c',
+                  weight: 3,
+                  fillColor: '#ef4444',
+                  fillOpacity: 1,
+                }
+              : {
+                  color: '#000000',
+                  weight: 2,
+                  fillColor: '#000000',
+                  fillOpacity: 0.95,
+                }
+          )
           layer.bringToFront?.()
         }
       },
 
       mouseout: () => {
         if (layerKey === 'buildings' || layerKey === 'clientBuildings') {
-          layer.setStyle?.(style)
+          layer.setStyle?.(getFeatureStyle(feature))
         }
       },
     })
   }
 
-  /*
-   * Permanent playground labels are rendered as HTML tooltips.
-   * Remove Leaflet's default tooltip chrome so our label styling
-   * remains clean over the satellite map.
-   */
-  if (typeof document !== 'undefined') {
-    const styleId = 'park-playground-label-style'
-
-    if (!document.getElementById(styleId)) {
-      const styleElement = document.createElement('style')
-      styleElement.id = styleId
-      styleElement.textContent = `
-        .park-playground-label {
-          background: transparent !important;
-          border: 0 !important;
-          box-shadow: none !important;
-          padding: 0 !important;
-        }
-
-        .park-playground-label::before {
-          display: none !important;
-        }
-      `
-      document.head.appendChild(styleElement)
-    }
-  }
 
   const filteredData = useMemo(() => {
     if (!featureData) return null
@@ -564,9 +445,9 @@ if (layerKey === 'busStops') {
 
   return (
     <GeoJSON
-      key={`${layerKey}-${filteredData.features.length}`}
+      key={`${layerKey}-${filteredData.features.length}-${activeFeatureId ?? 'none'}`}
       data={filteredData}
-      style={style}
+      style={getFeatureStyle}
       pointToLayer={pointToLayer}
       onEachFeature={onEachFeature}
     />

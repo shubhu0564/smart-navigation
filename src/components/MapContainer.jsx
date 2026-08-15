@@ -54,6 +54,16 @@ export default function MapContainer() {
   const [routeDetails, setRouteDetails] = useState(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+  // On phones, keep the map passive so normal page scrolling works.
+  // The user activates map gestures by tapping the map.
+  const isTouchDevice =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(pointer: coarse)').matches
+  const [mapInteractionActive, setMapInteractionActive] = useState(false)
+
+  // Keep search/click focus modest instead of jumping to an overly close zoom.
+  const DETAIL_ZOOM = 17.5
+
   /*
    * ==========================================================
    * LANDMARK FILTER
@@ -461,13 +471,28 @@ export default function MapContainer() {
     if (!feature) return
 
     try {
+      // Only a Search result should auto-scroll the webpage to the GIS map.
+      // A normal map tap/click must NOT hijack page scrolling.
+      const isSearchSelection = selectedLandmark.fromSearch === true
+
+      if (isSearchSelection) {
+        setMapInteractionActive(true)
+
+        if (mapWrapperRef.current) {
+          mapWrapperRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          })
+        }
+      }
+
       const destination = getFeatureLatLng(feature)
 
       // Search -> Bus Stop: exact stop, slight zoom, immediate popup.
       if (selectedLandmark.sourceCategory === 'busStop' && destination) {
         mapRef.current.flyTo(
           [destination.lat, destination.lng],
-          19,
+          DETAIL_ZOOM,
           { duration: 0.9 }
         )
 
@@ -516,73 +541,18 @@ export default function MapContainer() {
 
         if (bounds.isValid()) {
           mapRef.current.fitBounds(bounds, {
-            padding: [40, 40],
-            maxZoom: 19,
+            padding: [56, 56],
+            maxZoom: DETAIL_ZOOM,
             animate: true,
           })
 
+          // Building details are shown in the GIS status bar below the map.
+          // Do not open a Leaflet popup here.
           if (selectedLandmark.fromSearch !== false) {
-            const props = feature?.properties || {}
-            const buildingName =
-              props.bldg_namee ??
-              selectedLandmark.bldg_namee ??
-              selectedLandmark.name ??
-              'Unnamed Building'
-            const buildingNo =
-              props.bldg_no ??
-              selectedLandmark.bldg_no ??
-              selectedLandmark.description ??
-              ''
-
-            const googleMapsUrl =
-              `https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}`
-
-            const popupContent = `
-              <div style="font-family:system-ui,sans-serif;min-width:240px;line-height:1.5;color:#0f172a;">
-                <div style="font-size:17px;font-weight:800;margin-bottom:10px;">
-                  Building Details
-                </div>
-                <div style="font-size:14px;margin-bottom:7px;">
-                  <strong>Building Name:</strong><br/>
-                  ${buildingName || 'Unnamed Building'}
-                </div>
-                ${
-                  buildingNo
-                    ? `<div style="font-size:14px;margin-bottom:14px;">
-                        <strong>Building No:</strong><br/>
-                        ${buildingNo}
-                      </div>`
-                    : ''
-                }
-                <a
-                  href="${googleMapsUrl}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style="
-                    display:block;
-                    width:100%;
-                    box-sizing:border-box;
-                    text-align:center;
-                    text-decoration:none;
-                    background:#009f91;
-                    color:white;
-                    padding:11px 14px;
-                    border-radius:12px;
-                    font-size:14px;
-                    font-weight:700;
-                  "
-                >
-                  Open in Google Maps
-                </a>
-              </div>
-            `
-
-            L.popup({ maxWidth: 320, closeButton: true })
-              .setLatLng(bounds.getCenter())
-              .setContent(popupContent)
-              .openOn(mapRef.current)
-
-            setSelectedLandmark({ ...selectedLandmark, fromSearch: false })
+            setSelectedLandmark({
+              ...selectedLandmark,
+              fromSearch: false,
+            })
           }
 
           return
@@ -593,8 +563,8 @@ export default function MapContainer() {
       if (destination) {
         mapRef.current.flyTo(
           [destination.lat, destination.lng],
-          18.5,
-          { duration: 1 }
+          DETAIL_ZOOM,
+          { duration: 0.9 }
         )
 
         if (selectedLandmark.fromSearch !== false) {
@@ -773,8 +743,8 @@ export default function MapContainer() {
           mapRef.current.fitBounds(
             bounds,
             {
-              padding: [40, 40],
-              maxZoom: 19,
+              padding: [56, 56],
+              maxZoom: DETAIL_ZOOM,
               animate: true,
             }
           )
@@ -792,9 +762,9 @@ export default function MapContainer() {
             destination.lat,
             destination.lng,
           ],
-          18,
+          DETAIL_ZOOM,
           {
-            duration: 1,
+            duration: 0.9,
           }
         )
       }
@@ -875,8 +845,8 @@ export default function MapContainer() {
 
         if (bounds.isValid()) {
           mapRef.current.fitBounds(bounds, {
-            padding: [40, 40],
-            maxZoom: 19,
+            padding: [56, 56],
+            maxZoom: DETAIL_ZOOM,
             animate: true,
           })
           popupLatLng = bounds.getCenter()
@@ -887,64 +857,14 @@ export default function MapContainer() {
     } else {
       mapRef.current.flyTo(
         [destination.lat, destination.lng],
-        19,
+        DETAIL_ZOOM,
         { duration: 0.8 }
       )
     }
 
-    const googleMapsUrl =
-      `https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}`
-
-    const popupContent = `
-      <div style="font-family:system-ui,sans-serif;min-width:240px;line-height:1.5;color:#0f172a;">
-        <div style="font-size:17px;font-weight:800;margin-bottom:10px;">
-          Building Details
-        </div>
-
-        <div style="font-size:14px;margin-bottom:8px;">
-          <strong>Building Name:</strong><br/>
-          ${buildingName}
-        </div>
-
-        ${
-          String(buildingNo).trim()
-            ? `<div style="font-size:14px;margin-bottom:14px;">
-                <strong>Building No:</strong><br/>
-                ${buildingNo}
-              </div>`
-            : ''
-        }
-
-        <a
-          href="${googleMapsUrl}"
-          target="_blank"
-          rel="noopener noreferrer"
-          style="
-            display:block;
-            width:100%;
-            box-sizing:border-box;
-            text-align:center;
-            text-decoration:none;
-            background:#009f91;
-            color:white;
-            padding:11px 14px;
-            border-radius:12px;
-            font-size:14px;
-            font-weight:700;
-          "
-        >
-          Open in Google Maps
-        </a>
-      </div>
-    `
-
-    L.popup({
-      maxWidth: 320,
-      closeButton: true,
-    })
-      .setLatLng([popupLatLng.lat, popupLatLng.lng])
-      .setContent(popupContent)
-      .openOn(mapRef.current)
+    // Do not open a Leaflet popup for buildings.
+    // The selected building is highlighted in red and its details
+    // are displayed in the GIS status bar below the map.
 
     setToast({
       en: `${buildingName} selected`,
@@ -1617,6 +1537,14 @@ export default function MapContainer() {
             </div>
           )}
 
+          {isTouchDevice && !mapInteractionActive && (
+            <div
+              className="pointer-events-none absolute left-1/2 top-4 z-[900] -translate-x-1/2 rounded-full bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow-md backdrop-blur sm:hidden"
+            >
+              Tap the map to interact
+            </div>
+          )}
+
           <LeafletMap
             ref={mapRef}
             center={[
@@ -1624,12 +1552,27 @@ export default function MapContainer() {
               center.lng,
             ]}
             zoom={16}
-            scrollWheelZoom={true}
-            dragging={true}
-            touchZoom={true}
-            doubleClickZoom={true}
+            scrollWheelZoom={
+              isTouchDevice ? mapInteractionActive : true
+            }
+            dragging={
+              isTouchDevice ? mapInteractionActive : true
+            }
+            touchZoom={
+              isTouchDevice ? mapInteractionActive : true
+            }
+            doubleClickZoom={
+              isTouchDevice ? mapInteractionActive : true
+            }
             zoomControl={true}
             className="h-full w-full"
+            eventHandlers={{
+              click: () => {
+                if (isTouchDevice) {
+                  setMapInteractionActive(true)
+                }
+              },
+            }}
             whenCreated={(map) => {
               mapRef.current =
                 map
@@ -1641,9 +1584,9 @@ export default function MapContainer() {
                ================================================= */}
 
         <TileLayer
-  url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+  url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
   maxZoom={19}
-  attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+  attribution='&copy; OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team'
 />
 
             {/* =================================================
@@ -1933,6 +1876,47 @@ export default function MapContainer() {
             {/* Landmark point markers are intentionally hidden. Building polygons are the clickable map features. */}
 
             {/* =================================================
+                SELECTED LOCATION MARKER
+               ================================================= */}
+
+            {selectedLandmark?.sourceCategory === 'building' &&
+              selectedLandmark?.latitude != null &&
+              selectedLandmark?.longitude != null && (
+                <Marker
+                  position={[
+                    selectedLandmark.latitude,
+                    selectedLandmark.longitude,
+                  ]}
+                  icon={L.divIcon({
+                    className: 'selected-building-marker',
+                    html: `
+                      <div style="
+                        width:42px;
+                        height:42px;
+                        border-radius:50% 50% 50% 0;
+                        background:#dc2626;
+                        border:3px solid #ffffff;
+                        box-shadow:0 3px 10px rgba(0,0,0,0.35);
+                        transform:rotate(-45deg);
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                      ">
+                        <div style="
+                          width:12px;
+                          height:12px;
+                          border-radius:50%;
+                          background:#ffffff;
+                        "></div>
+                      </div>
+                    `,
+                    iconSize: [42, 42],
+                    iconAnchor: [21, 42],
+                  })}
+                />
+              )}
+
+            {/* =================================================
                 CURRENT GPS LOCATION
                ================================================= */}
 
@@ -2029,56 +2013,98 @@ export default function MapContainer() {
         </div>
 
         {/* =====================================================
-            STATUS BAR
+            SELECTED LOCATION DETAILS / STATUS BAR
            ===================================================== */}
-
-        <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm text-slate-500">
-
-          <span className="flex items-center gap-2">
-            <MapPin size={14} />
-
-            {getText(
-              {
-                en: 'Live GPS tracking',
-                mr: 'थेट GPS ट्रॅकिंग',
-              },
-              language
+        <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1">
+            {selectedLandmark?.sourceCategory === 'building' ? (
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-lg">
+                  📍
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-slate-900">
+                    {selectedLandmark.name || 'Building'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {String(selectedLandmark.bldg_no ?? '').trim()
+                      ? `Building No: ${selectedLandmark.bldg_no}`
+                      : 'Building number not assigned'}
+                  </p>
+                </div>
+              </div>
+            ) : selectedLandmark?.sourceCategory === 'busStop' ? (
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 text-lg">
+                  🚌
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-slate-900">
+                    {selectedLandmark.name || 'Bus Stop'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {String(selectedLandmark.stopNo ?? '').trim()
+                      ? `Stop No: ${selectedLandmark.stopNo}`
+                      : 'Bus stop'}
+                  </p>
+                </div>
+              </div>
+            ) : selectedLandmark?.sourceCategory === 'corporationLandmark' ? (
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-100 text-lg">
+                  📍
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-slate-900">
+                    {selectedLandmark.name || 'Landmark'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {String(selectedLandmark.landmarkNo ?? '').trim()
+                      ? `Landmark No: ${selectedLandmark.landmarkNo}`
+                      : 'Corporation Landmark'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <MapPin size={14} />
+                {getText(
+                  {
+                    en: 'Live GPS tracking',
+                    mr: 'थेट GPS ट्रॅकिंग',
+                  },
+                  language
+                )}
+              </div>
             )}
-          </span>
+          </div>
 
-          <span className="flex items-center gap-3">
-
+          <div className="flex shrink-0 items-center gap-3">
             {routeDetails ? (
               <>
                 <span className="flex items-center gap-1">
                   <Route size={14} />
-
-                  {
-                    routeDetails.walkingDistance
-                  }{' '}
-                  km
+                  {routeDetails.walkingDistance} km
                 </span>
-
                 <span className="flex items-center gap-1">
                   <Clock3 size={14} />
-
-                  {
-                    routeDetails.walkingTime
-                  }{' '}
-                  min walk
+                  {routeDetails.walkingTime} min walk
                 </span>
               </>
-            ) : (
-              getText(
-                {
-                  en: 'Tap a landmark to route',
-                  mr: 'मार्गासाठी लँडमार्क निवडा',
-                },
-                language
-              )
-            )}
+            ) : null}
 
-          </span>
+            {selectedLandmark &&
+              selectedLandmark.latitude != null &&
+              selectedLandmark.longitude != null && (
+                <button
+                  type="button"
+                  onClick={openGoogleMaps}
+                  className="rounded-full bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-teal-700 active:scale-[0.98]"
+                >
+                  Open in Google Maps
+                </button>
+              )}
+          </div>
         </div>
       </motion.div>
 
