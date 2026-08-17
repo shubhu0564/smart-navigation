@@ -6,6 +6,7 @@ import {
   Marker,
   Circle,
   Polyline,
+  Popup,
 } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet-routing-machine'
@@ -458,6 +459,70 @@ export default function MapContainer() {
     }
   }, [geoJson.clientBuildings])
 
+  const createLollipopIcon = (sourceCategory = '') => {
+    let color = '#0f766e'
+
+    if (sourceCategory === 'park' || sourceCategory === 'corporationLandmark') {
+      color = '#16a34a'
+    } else if (sourceCategory === 'busStop') {
+      color = '#0284c7'
+    } else if (sourceCategory === 'educationalInstitute') {
+      color = '#7c3aed'
+    } else if (sourceCategory === 'communityCenter') {
+      color = '#ea580c'
+    } else if (sourceCategory === 'governmentBuilding') {
+      color = '#475569'
+    }
+
+    return L.divIcon({
+      className: 'category-lollipop-marker',
+      html: `
+        <div style="
+          position:relative;
+          width:34px;
+          height:46px;
+          display:flex;
+          justify-content:center;
+        ">
+          <div style="
+            position:absolute;
+            top:0;
+            width:30px;
+            height:30px;
+            border-radius:50%;
+            background:${color};
+            border:3px solid #ffffff;
+            box-shadow:0 2px 8px rgba(0,0,0,0.30);
+          "></div>
+          <div style="
+            position:absolute;
+            top:27px;
+            width:4px;
+            height:16px;
+            background:${color};
+            border-radius:999px;
+            box-shadow:0 1px 2px rgba(0,0,0,0.20);
+          "></div>
+        </div>
+      `,
+      iconSize: [34, 46],
+      iconAnchor: [17, 43],
+    })
+  }
+
+  const getCategoryPlaceBounds = (places = []) => {
+    const bounds = L.latLngBounds([])
+
+    places.forEach((place) => {
+      const destination = getFeatureLatLng(place?.feature)
+      if (destination) {
+        bounds.extend([destination.lat, destination.lng])
+      }
+    })
+
+    return bounds.isValid() ? bounds : null
+  }
+
   /*
    * ==========================================================
    * SELECTED FEATURE FOCUS
@@ -467,13 +532,46 @@ export default function MapContainer() {
   useEffect(() => {
     if (!selectedLandmark || !mapRef.current) return
 
+    // Category card selection: display all places in the
+    // category as lollipop markers and fit the map to them.
+    if (
+      selectedLandmark.sourceCategory === 'categoryGroup' &&
+      Array.isArray(selectedLandmark.categoryPlaces) &&
+      selectedLandmark.categoryPlaces.length > 0
+    ) {
+      const bounds = getCategoryPlaceBounds(
+        selectedLandmark.categoryPlaces,
+      )
+
+      if (bounds) {
+        if (selectedLandmark.categoryPlaces.length === 1) {
+          const center = bounds.getCenter()
+          mapRef.current.flyTo(
+            [center.lat, center.lng],
+            DETAIL_ZOOM,
+            { duration: 0.7 },
+          )
+        } else {
+          mapRef.current.fitBounds(bounds, {
+            padding: [55, 55],
+            maxZoom: 17.2,
+            animate: true,
+          })
+        }
+      }
+
+      return
+    }
+
     const feature = selectedLandmark.feature
     if (!feature) return
 
     try {
-      // Only a Search result should auto-scroll the webpage to the GIS map.
-      // A normal map tap/click must NOT hijack page scrolling.
-      const isSearchSelection = selectedLandmark.fromSearch === true
+      // Only a real Search result should auto-scroll the webpage to the GIS map.
+      // Clicking a category place should locate it on the map but must NOT hijack page scrolling.
+      const isSearchSelection =
+        selectedLandmark.fromSearch === true &&
+        selectedLandmark.fromCategory !== true
 
       if (isSearchSelection) {
         setMapInteractionActive(true)
@@ -487,6 +585,148 @@ export default function MapContainer() {
       }
 
       const destination = getFeatureLatLng(feature)
+
+      // CATEGORY-LIST PLACE SELECTION
+      // For parks, education, community centers, government buildings
+      // and landmarks, the selected list item must locate the exact
+      // feature and immediately show its popup. Search behavior remains
+      // unchanged below.
+      if (selectedLandmark.fromCategory === true) {
+        if (
+          feature.geometry?.type === 'Polygon' ||
+          feature.geometry?.type === 'MultiPolygon'
+        ) {
+          const selectedLayer = L.geoJSON(feature)
+          const selectedBounds = selectedLayer.getBounds()
+
+          if (selectedBounds.isValid()) {
+            mapRef.current.fitBounds(selectedBounds, {
+              padding: [70, 70],
+              maxZoom: DETAIL_ZOOM,
+              animate: true,
+            })
+
+            const props = feature?.properties || {}
+            const placeName =
+              selectedLandmark.name ||
+              props.landmarkName ||
+              props.bldg_namee ||
+              props.bldg_name ||
+              props.building_name ||
+              props.name ||
+              props.Name ||
+              'Selected Place'
+
+            const placeNo =
+              selectedLandmark.landmarkNo ??
+              props.landmarkNo ??
+              props.bldg_no ??
+              props.building_no ??
+              props.No ??
+              props.no ??
+              ''
+
+            const googleMapsUrl =
+              `https://www.google.com/maps/search/?api=1&query=${selectedBounds.getCenter().lat},${selectedBounds.getCenter().lng}`
+
+            const popupContent = `
+              <div style="font-family:system-ui,sans-serif;min-width:235px;line-height:1.5;color:#0f172a;">
+                <div style="font-size:17px;font-weight:800;margin-bottom:9px;">
+                  ${placeName}
+                </div>
+                ${
+                  String(placeNo ?? '').trim()
+                    ? `<div style="font-size:14px;margin-bottom:10px;"><strong>No:</strong> ${placeNo}</div>`
+                    : ''
+                }
+                <a
+                  href="${googleMapsUrl}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="
+                    display:block;
+                    width:100%;
+                    box-sizing:border-box;
+                    text-align:center;
+                    text-decoration:none;
+                    background:#009f91;
+                    color:white;
+                    padding:10px 12px;
+                    border-radius:10px;
+                    font-size:13px;
+                    font-weight:700;
+                  "
+                >
+                  Open in Google Maps
+                </a>
+              </div>
+            `
+
+            L.popup({
+              maxWidth: 320,
+              closeButton: true,
+            })
+              .setLatLng(selectedBounds.getCenter())
+              .setContent(popupContent)
+              .openOn(mapRef.current)
+
+            return
+          }
+        }
+
+        // Point feature selected from the category list.
+        if (destination) {
+          mapRef.current.flyTo(
+            [destination.lat, destination.lng],
+            DETAIL_ZOOM,
+            { duration: 0.8 },
+          )
+
+          const placeName =
+            selectedLandmark.name || 'Selected Place'
+
+          const googleMapsUrl =
+            `https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}`
+
+          const popupContent = `
+            <div style="font-family:system-ui,sans-serif;min-width:220px;line-height:1.5;color:#0f172a;">
+              <div style="font-size:17px;font-weight:800;margin-bottom:10px;">
+                ${placeName}
+              </div>
+              <a
+                href="${googleMapsUrl}"
+                target="_blank"
+                rel="noopener noreferrer"
+                style="
+                  display:block;
+                  width:100%;
+                  box-sizing:border-box;
+                  text-align:center;
+                  text-decoration:none;
+                  background:#009f91;
+                  color:white;
+                  padding:10px 12px;
+                  border-radius:10px;
+                  font-size:13px;
+                  font-weight:700;
+                "
+              >
+                Open in Google Maps
+              </a>
+            </div>
+          `
+
+          L.popup({
+            maxWidth: 320,
+            closeButton: true,
+          })
+            .setLatLng([destination.lat, destination.lng])
+            .setContent(popupContent)
+            .openOn(mapRef.current)
+        }
+
+        return
+      }
 
       // Search -> Bus Stop: exact stop, slight zoom, immediate popup.
       if (selectedLandmark.sourceCategory === 'busStop' && destination) {
@@ -595,6 +835,14 @@ export default function MapContainer() {
    */
   useEffect(() => {
     if (!mapRef.current) return
+
+    // When the user has selected a specific place from the
+    // category list, let the selected-feature effect control
+    // the map. Do not immediately replace it with a
+    // category-wide fitBounds.
+    if (selectedLandmark?.fromCategory === true) {
+      return
+    }
 
     try {
       let layer = null
@@ -1875,7 +2123,67 @@ export default function MapContainer() {
 
             {/* Landmark point markers are intentionally hidden. Building polygons are the clickable map features. */}
 
-            {/* =================================================
+                        {/* =================================================
+                 CATEGORY PLACE LOLLIPOP MARKERS
+                ================================================= */}
+
+            {selectedLandmark?.categoryPlaces?.length > 0 &&
+              selectedLandmark?.sourceCategory !== 'building' &&
+              selectedLandmark.categoryPlaces.map((place, index) => {
+                const destination = getFeatureLatLng(place?.feature)
+
+                if (!destination) return null
+
+                const placeCategory =
+                  place?.sourceCategory ||
+                  selectedLandmark?.categoryId ||
+                  'category'
+
+                return (
+                  <Marker
+                    key={`category-place-${index}-${place.name}`}
+                    position={[
+                      destination.lat,
+                      destination.lng,
+                    ]}
+                    icon={createLollipopIcon(placeCategory)}
+                  >
+                    <Popup closeButton={true}>
+                      <div
+                        style={{
+                          minWidth: '190px',
+                          fontFamily: 'system-ui, sans-serif',
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '15px',
+                            fontWeight: 800,
+                            marginBottom: '6px',
+                            color: '#0f172a',
+                          }}
+                        >
+                          {place.name}
+                        </div>
+
+                        {place.number ? (
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: '#64748b',
+                            }}
+                          >
+                            No: {place.number}
+                          </div>
+                        ) : null}
+                      </div>
+                    </Popup>
+                  </Marker>
+                )
+              })}
+
+{/* =================================================
                 SELECTED LOCATION MARKER
                ================================================= */}
 
