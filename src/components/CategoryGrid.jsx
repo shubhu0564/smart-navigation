@@ -17,49 +17,46 @@ import { normalizeLandmarkFeature } from '../utils/geoJsonUtils'
 
 const PLACE_DEFINITIONS = {
   landmark: [
-    'Kishore Kumar Bagh',
-    'Vijay Tendulkar Amphitheatre',
-    'Kaifi Azmi Park',
-    'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
-    'Vrajlal Parekh Vidyanidhi High School',
-    'Manoj Kumar Garden',
-    'Smt SB Aarya Vidya Mandir',
-    'Lokmanya Tilak Udyan',
-    'Ecole Mondiale World School',
-    'Gujarath Bhavan',
-    'Goa Bhavan',
-    'CDAC – Centre For Development of Advance Computing',
-    'Ivy League House (Girls Hostel)',
-    'Juhu Club Millennium',
-    'Shree Kalimata Temple',
-    'Manoranjan Park',
+    { name: 'Kishore Kumar Bagh', number: 1 },
+    { name: 'Vijay Tendulkar Amphitheatre', number: 2 },
+    { name: 'Kaifi Azmi Park', number: 3 },
+    { name: 'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies', number: 4 },
+    { name: 'Vrajlal Parekh Vidyanidhi High School', number: 5 },
+    { name: 'Manoj Kumar Garden', number: 6 },
+    { name: 'Smt SB Aarya Vidya Mandir', number: 7 },
+    { name: 'Lokmanya Tilak Udyan', number: 8 },
+    { name: 'Ecole Mondiale World School', number: 9 },
+    { name: 'Gujarath Bhavan', number: 10 },
+    { name: 'Goa Bhavan', number: 11 },
+    { name: 'CDAC – Centre For Development of Advance Computing', number: 12 },
+    { name: 'Ivy League House (Girls Hostel)', number: 13 },
+    { name: 'Juhu Club Millennium', number: 14 },
+    { name: 'Shree Kalimata Temple', number: 15 },
+    { name: 'Manoranjan Park', number: 16 },
   ],
-
   park: [
-    'Lokmanya Tilak Udyan',
-    'Manoranjan Park',
-    'Kaifi Azmi Park',
-    'Manoj Kumar Garden',
-    'Kishore Kumar Bagh',
+    { name: 'Lokmanya Tilak Udyan', number: 8 },
+    { name: 'Manoranjan Park', number: 16 },
+    { name: 'Kaifi Azmi Park', number: 3 },
+    { name: 'Manoj Kumar Garden', number: 6 },
+    { name: 'Kishore Kumar Bagh', number: 1 },
   ],
-
   educationalInstitute: [
-    'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
-    'Vrajlal Parekh Vidyanidhi High School',
-    'Ecole Mondiale World School',
-    'Smt SB Aarya Vidya Mandir',
+    { name: 'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies', number: 4 },
+    { name: 'Vrajlal Parekh Vidyanidhi High School', number: 5 },
+    { name: 'Ecole Mondiale World School', number: 9 },
+    { name: 'Smt SB Aarya Vidya Mandir', number: 7 },
   ],
-
   communityCenter: [
-    'Juhu Club Millennium',
+    { name: 'Juhu Club Millennium', number: 14 },
   ],
-
   governmentBuilding: [
-    'CDAC – Centre For Development of Advance Computing',
-    'Goa Bhavan',
-    'Gujarath Bhavan',
+    { name: 'CDAC – Centre For Development of Advance Computing', number: 12 },
+    { name: 'Goa Bhavan', number: 11 },
+    { name: 'Gujarath Bhavan', number: 10 },
   ],
 }
+
 
 const normalise = (value) =>
   String(value ?? '')
@@ -70,44 +67,69 @@ const normalise = (value) =>
 const aliasesFor = (name) => {
   const n = normalise(name)
 
-  if (n.includes('kamlaraheja')) {
-    return [
-      n,
-      normalise('Kamla Raheja Vidyanidhi'),
-      normalise('Kamala Raheja Vidyamandir'),
-      normalise('Kamla Rheja Vidyanidhi institute for architecture and environmental studies'),
-    ]
+  const aliasMap = {
+    'kishore kumar bagh': ['kishore kumar bagh'],
+    'vijay tendulkar amphitheatre': [
+      'vijay tendulkar amphitheatre',
+      'vijay tendulkar amphitheater',
+    ],
+    'kaifi azmi park': ['kaifi azmi park'],
+    'kamla raheja vidyanidhi institute for architecture & environmental studies': [
+      'kamla raheja vidyanidhi institute for architecture environmental studies',
+      'kamla raheja vidyanidhi',
+      'krvia',
+      'kamala raheja vidyamandir',
+    ],
+    'vrajlal parekh vidyanidhi high school': [
+      'vrajlal parekh vidyanidhi high school',
+      'vrajlal parekh vidyanidhi',
+      'vrajlal parakh vidyanidhi',
+      'vrajlal parekh',
+    ],
+    'manoj kumar garden': ['manoj kumar garden'],
+    'smt sb aarya vidya mandir': [
+      'smt sb aarya vidya mandir',
+      'sb aarya vidya mandir',
+      'aarya vidya mandir',
+      'smt sb kumar vishya mandir',
+    ],
+    'lokmanya tilak udyan': [
+      'lokmanya tilak udyan',
+      'tilak udyan',
+    ],
+    'ecole mondiale world school': [
+      'ecole mondiale world school',
+      'ecole mondiale',
+    ],
+    'gujarath bhavan': [
+      'gujarath bhavan',
+      'gujarat bhavan',
+    ],
+    'goa bhavan': ['goa bhavan'],
+    'cdac – centre for development of advance computing': [
+      'cdac',
+      'centre for development of advance computing',
+      'centre for development of advanced computing',
+    ],
+    'ivy league house (girls hostel)': [
+      'ivy league house',
+      'ivy league house girls hostel',
+    ],
+    'juhu club millennium': [
+      'juhu club millennium',
+      'juhu club',
+    ],
+    'shree kalimata temple': [
+      'shree kalimata temple',
+      'kalimata temple',
+    ],
+    'manoranjan park': ['manoranjan park'],
   }
 
-  if (n.includes('vrajlalparekh') || n.includes('vrajlalparakh')) {
-    return [
-      n,
-      normalise('Vrajlal Parekh Vidyanidhi'),
-      normalise('Vrajlal Parakh Vidyanidhi'),
-    ]
-  }
-
-  if (n.includes('ecolemondiale')) {
-    return [n, normalise('Ecole Mondiale')]
-  }
-
-  if (n.includes('aaryavidyamandir') || n.includes('sbkum')) {
-    return [n, normalise('Smt SB Aarya Vidya Mandir')]
-  }
-
-  if (n.includes('cdac')) {
-    return [n, normalise('CDAC')]
-  }
-
-  if (n.includes('gujarath') || n.includes('gujarat')) {
-    return [n, normalise('Gujarath Bhavan'), normalise('Gujarat Bhavan')]
-  }
-
-  if (n.includes('juhuclub')) {
-    return [n, normalise('Juhu Club')]
-  }
-
-  return [n]
+  return (
+    aliasMap[n] ||
+    [n]
+  )
 }
 
 const featureLabel = (feature) => {
@@ -159,7 +181,7 @@ const featureCoordinates = (feature) => {
   return null
 }
 
-export default function CategoryGrid() {
+export default function CategoryGrid({ showCards = true, showPlacesList = true }) {
   const {
     language,
     selectedCategory,
@@ -352,23 +374,49 @@ export default function CategoryGrid() {
     )
   }
 
-  const findBuildingFeatureForName = (name) => {
-    const aliases = aliasesFor(name)
+  const findBuildingFeatureForName = (name, number = null) => {
     const features =
       geoJson.clientBuildings?.features || []
 
+    const aliases = aliasesFor(name).map(normalise)
+
     return (
       features.find((feature) => {
+        const p = feature?.properties || {}
+
         const current = normalise(
-          featureLabel(feature),
+          p.bldg_namee ??
+          p.bldg_name ??
+          p.building_name ??
+          p.name ??
+          p.Name ??
+          '',
         )
 
-        return aliases.some(
-          (alias) =>
-            current === alias ||
-            current.includes(alias) ||
-            alias.includes(current),
+        const currentNumber = Number(
+          p.landmarkNo ??
+          p.landmark_no ??
+          p.bldg_no ??
+          p.building_no ??
+          p.No ??
+          p.no,
         )
+
+        const nameMatch =
+          current &&
+          aliases.some(
+            (alias) =>
+              current === alias ||
+              current.includes(alias) ||
+              alias.includes(current),
+          )
+
+        const numberMatch =
+          number != null &&
+          Number.isFinite(Number(number)) &&
+          currentNumber === Number(number)
+
+        return nameMatch || numberMatch
       }) || null
     )
   }
@@ -407,41 +455,43 @@ export default function CategoryGrid() {
   }
 
   const getPlacesForCategory = (categoryId) => {
-    const canonical = canonicalCategoryId(categoryId)
+    const canonical =
+      canonicalCategoryId(categoryId)
 
     if (canonical === 'busStop') {
       return getBusStops()
     }
 
-    const names =
+    const definitions =
       PLACE_DEFINITIONS[canonical] || []
 
-    return names
-      .map((name, index) => {
-        const landmark = findLandmarkForName(name)
-        const building =
+    return definitions.map(
+      (place, index) => {
+        const landmark =
+          findLandmarkForName(place.name)
+
+        const feature =
           landmark?.feature ||
-          findBuildingFeatureForName(name)
+          findBuildingFeatureForName(
+            place.name,
+            place.number,
+          )
 
-        if (landmark?.feature || building) {
-          return {
-            name,
-            number: landmark?.landmarkNo ??
-              featureNumber(building) ??
-              '',
-            feature:
-              landmark?.feature || building,
-            index,
-            sourceCategory:
-              canonical === 'park'
-                ? 'corporationLandmark'
-                : canonical,
-          }
+        return {
+          ...place,
+          number:
+            landmark?.landmarkNo ??
+            place.number ??
+            '',
+          feature,
+          index,
+          sourceCategory:
+            canonical === 'park'
+              ? 'corporationLandmark'
+              : canonical,
         }
-
-        return null
-      })
-      .filter(Boolean)
+      },
+    )
   }
 
   const selectPlace = (
@@ -452,41 +502,71 @@ export default function CategoryGrid() {
     const canonical =
       canonicalCategoryId(categoryId)
 
-    const feature = place?.feature
+    let feature = place?.feature || null
+
+    // Re-resolve from the authoritative GIS dataset at click time.
+    if (!feature && canonical === 'busStop') {
+      feature =
+        geoJson.busStops?.features?.[place.index] ||
+        null
+    }
+
+    if (!feature) {
+      feature =
+        findBuildingFeatureForName(
+          place.name,
+          place.number,
+        )
+    }
+
+    if (!feature) {
+      const landmark =
+        findLandmarkForName(place.name)
+
+      feature =
+        landmark?.feature ||
+        null
+    }
 
     if (!feature) {
       console.warn(
-        'No feature found for:',
-        place?.name,
+        'GIS feature not found for:',
+        place.name,
+        place.number,
       )
       return
     }
 
     const properties =
-      feature?.properties || {}
-
-    const coords =
-      featureCoordinates(feature)
-
-    const number =
-      place.number ||
-      featureNumber(feature)
+      feature.properties || {}
 
     const sourceCategory =
       canonical === 'park'
         ? 'corporationLandmark'
         : canonical
 
-    setSelectedLandmark({
+    const stopNo =
+      properties.No ??
+      properties.no ??
+      properties.Number ??
+      properties.number ??
+      properties.stop_no ??
+      properties.stopNo ??
+      ''
+
+    const selected = {
       id:
         properties.id ??
         properties.ID ??
         properties.fid_1 ??
-        `${sourceCategory}-${index}-${normalise(place.name)}`,
+        `category-${canonical}-${index}`,
 
       name:
         place.name ||
-        featureLabel(feature) ||
+        properties.landmarkName ||
+        properties.bldg_namee ||
+        properties.name ||
+        properties.Name ||
         'Selected Place',
 
       road:
@@ -494,17 +574,17 @@ export default function CategoryGrid() {
         properties.address ??
         '',
 
-      category:
-        canonical,
+      category: canonical,
 
       sourceCategory,
 
-      latitude: coords?.lat ?? null,
-      longitude: coords?.lng ?? null,
+      latitude: null,
+      longitude: null,
 
       description:
         place.name ||
-        featureLabel(feature) ||
+        properties.landmarkName ||
+        properties.bldg_namee ||
         '',
 
       address:
@@ -513,57 +593,47 @@ export default function CategoryGrid() {
         '',
 
       image: null,
-
-      rating:
-        properties.rating ?? 4.6,
-
-      steps:
-        properties.steps ?? [],
+      rating: properties.rating ?? 4.6,
+      steps: [],
 
       landmarkNo:
         properties.landmarkNo ??
-        number,
+        properties.landmark_no ??
+        place.number ??
+        '',
 
       bldg_namee:
         properties.bldg_namee ??
-        featureLabel(feature),
+        place.name,
 
       bldg_no:
         properties.bldg_no ??
-        number,
-
-      stopNo:
-        properties.No ??
-        properties.no ??
-        properties.Number ??
-        properties.number ??
-        properties.stop_no ??
-        properties.stopNo ??
+        properties.building_no ??
+        place.number ??
         '',
 
-      busStopNo:
-        properties.No ??
-        properties.no ??
-        properties.Number ??
-        properties.number ??
-        properties.stop_no ??
-        properties.stopNo ??
-        '',
+      stopNo,
+      busStopNo: stopNo,
 
       feature,
 
-      fromSearch: true,
+      // These flags tell MapContainer that this was selected
+      // directly from the category list.
+      fromSearch: false,
       fromCategory: true,
 
       categoryPlaces: [
         {
           name: place.name,
-          number,
+          number: place.number,
           feature,
           sourceCategory,
         },
       ],
-    })
+    }
+
+    setSelectedCategory(categoryId)
+    setSelectedLandmark(selected)
   }
 
   const handleCategoryClick = (
@@ -573,19 +643,19 @@ export default function CategoryGrid() {
       canonicalCategoryId(category.id)
 
     const closing =
-      openCategoryId === category.id
-
-    setSelectedCategory(category.id)
+      selectedCategory === category.id
 
     if (closing) {
-      setOpenCategoryId(null)
+      setSelectedCategory('all')
       setSelectedLandmark(null)
+      setOpenCategoryId(null)
       return
     }
 
     const places =
       getPlacesForCategory(canonical)
 
+    setSelectedCategory(category.id)
     setOpenCategoryId(category.id)
 
     /*
@@ -615,16 +685,31 @@ export default function CategoryGrid() {
     })
   }
 
-  const openPlaces =
-    openCategoryId
-      ? getPlacesForCategory(
-          openCategoryId,
+  const listCategoryId =
+    showPlacesList &&
+    selectedCategory &&
+    selectedCategory !== 'all'
+      ? selectedCategory
+      : null
+
+  const openPlaces = listCategoryId
+    ? getPlacesForCategory(
+        listCategoryId,
+      )
+    : []
+
+  const listCategory =
+    listCategoryId
+      ? orderedCategories.find(
+          (item) =>
+            item.id === listCategoryId,
         )
-      : []
+      : null
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {showCards ? (
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {orderedCategories.map(
           (category) => {
             const Icon =
@@ -697,9 +782,10 @@ export default function CategoryGrid() {
             )
           },
         )}
-      </div>
+        </div>
+      ) : null}
 
-      {openCategoryId && (
+      {showPlacesList && listCategoryId && (
         <motion.div
           initial={{
             opacity: 0,
@@ -723,7 +809,7 @@ export default function CategoryGrid() {
                     orderedCategories.find(
                       (item) =>
                         item.id ===
-                        openCategoryId,
+                        listCategoryId,
                     )?.label || {
                       en: 'Places',
                       mr: 'ठिकाणे',
@@ -760,10 +846,10 @@ export default function CategoryGrid() {
                 ) => (
                   <button
                     type="button"
-                    key={`${openCategoryId}-${place.name}-${index}`}
+                    key={`${listCategoryId}-${place.name}-${index}`}
                     onClick={() =>
                       selectPlace(
-                        openCategoryId,
+                        listCategoryId,
                         place,
                         index,
                       )

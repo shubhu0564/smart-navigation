@@ -25,7 +25,6 @@ export default function HomePage() {
           }`}
       >
         <div className="max-w-5xl space-y-1 sm:space-y-4">
-
           <h1 className="text-[26px] font-extrabold leading-tight text-white sm:text-5xl md:text-6xl">
             {getText(
               {
@@ -45,34 +44,42 @@ export default function HomePage() {
               language
             )}
           </p>
-
         </div>
       </motion.section>
 
-      {/* MAP / SEARCH SECTION */}
+      {/* SEARCH / CATEGORY / MAP SECTION */}
       <section
         id="landmark-map-section"
         className="w-full space-y-3 sm:space-y-6"
       >
-
         {/* SEARCH */}
         <SearchBar />
 
-        {/* CATEGORY GRID */}
+        {/* CATEGORY BUTTONS ONLY */}
         <div className="rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[32px] sm:p-6">
-          <CategoryGrid />
+          <CategoryGrid
+            showCards={true}
+            showPlacesList={false}
+          />
         </div>
 
         {/* MAP */}
         <MapContainer />
 
-        {/* MAP STATUS */}
+        {/* SELECTED CATEGORY PLACE LIST
+            This is intentionally BELOW the map. */}
+        <CategoryGrid
+          showCards={false}
+          showPlacesList={true}
+        />
+
+        {/* AQI / AREA STATUS
+            This is intentionally BELOW the place list. */}
         <MapStatusBar />
 
         {/* AREA INFORMATION */}
         <div className="rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[28px] sm:p-5 md:p-6">
           <div className="space-y-3 text-[13px] leading-6 text-slate-700 sm:space-y-4 sm:text-[15px] sm:leading-7 md:text-[16px] md:leading-8">
-
             <p>
               In 1950, the Government of Bombay acquired over 220 acres along
               the Irla Nullah to develop a planned residential neighbourhood.
@@ -88,7 +95,6 @@ export default function HomePage() {
               1977, the area has remained a landmark of Mumbai&apos;s planned
               urban development.
             </p>
-
           </div>
         </div>
       </section>
@@ -99,7 +105,6 @@ export default function HomePage() {
 
           {/* GUIDED BY */}
           <div className="space-y-5 text-center">
-
             <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">
               GUIDED BY
             </h2>
@@ -125,14 +130,12 @@ export default function HomePage() {
                 President of Mumbai BJP
               </p>
             </div>
-
           </div>
 
           <div className="border-t border-slate-200" />
 
           {/* PROJECT INITIATED BY */}
           <div className="space-y-6 text-center">
-
             <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">
               PROJECT INITIATED BY
             </h2>
@@ -146,7 +149,6 @@ export default function HomePage() {
             </div>
 
             <div className="space-y-2">
-
               <h3 className="text-[28px] font-semibold leading-tight text-slate-900 sm:text-[34px]">
                 Shri. Deepak Kotekar Ji
               </h3>
@@ -154,25 +156,19 @@ export default function HomePage() {
               <p className="text-[18px] font-medium leading-tight text-slate-700 sm:text-[22px]">
                 Hon&apos;ble Corporator
               </p>
-
             </div>
-
           </div>
 
           <div className="border-t border-slate-200" />
 
           {/* SUPPORTED BY */}
           <div className="space-y-6 text-center">
-
             <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">
               SUPPORTED BY
             </h2>
 
             <div className="grid grid-cols-2 gap-4 sm:gap-8">
-
-              {/* GASWG */}
               <div className="flex flex-col items-center gap-3 px-2 text-center">
-
                 <img
                   src="/gulmohar%20logo_png.png"
                   alt="GASWG Logo"
@@ -180,7 +176,6 @@ export default function HomePage() {
                 />
 
                 <div className="space-y-2">
-
                   <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">
                     GASWG
                   </h3>
@@ -188,14 +183,10 @@ export default function HomePage() {
                   <p className="text-sm leading-6 text-slate-700">
                     Gulmohar Area Societies Welfare Group
                   </p>
-
                 </div>
-
               </div>
 
-              {/* ALM */}
               <div className="flex flex-col items-center gap-3 px-2 text-center">
-
                 <img
                   src="/ALM.jpeg"
                   alt="Gulmohar ALM-67"
@@ -203,7 +194,6 @@ export default function HomePage() {
                 />
 
                 <div className="space-y-2">
-
                   <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">
                     Gulmohar ALM-67
                   </h3>
@@ -211,20 +201,15 @@ export default function HomePage() {
                   <p className="text-sm leading-6 text-slate-700">
                     Strong Community, Better Neighbourhood
                   </p>
-
                 </div>
-
               </div>
-
             </div>
-
           </div>
 
           <div className="border-t border-slate-200" />
 
           {/* DESIGN BY */}
           <div className="space-y-6 text-center">
-
             <h2 className="text-3xl font-bold uppercase tracking-[0.3em] text-slate-900 sm:text-4xl">
               DESIGN BY
             </h2>
@@ -243,7 +228,6 @@ export default function HomePage() {
             </a>
 
             <div className="space-y-2">
-
               <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">
                 Sapthakalaa
               </h3>
@@ -253,14 +237,11 @@ export default function HomePage() {
                 <br />
                 Planning and Management
               </p>
-
             </div>
-
           </div>
-
         </div>
       </section>
-
     </div>
   )
 }
+

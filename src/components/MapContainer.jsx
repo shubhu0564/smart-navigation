@@ -432,6 +432,62 @@ export default function MapContainer() {
   }
 
   /*
+   * RED LOLLIPOP MARKER
+   *
+   * Used for every selected building and every selected
+   * corporation landmark.
+   */
+  const createRedLollipopIcon = () =>
+    L.divIcon({
+      className: 'red-lollipop-marker',
+      html: `
+        <div style="
+          position:relative;
+          width:38px;
+          height:54px;
+          display:flex;
+          justify-content:center;
+          pointer-events:auto;
+        ">
+          <div style="
+            position:absolute;
+            top:0;
+            width:32px;
+            height:32px;
+            border-radius:50%;
+            background:#dc2626;
+            border:3px solid #ffffff;
+            box-shadow:0 3px 10px rgba(0,0,0,0.35);
+          ">
+            <div style="
+              width:9px;
+              height:9px;
+              border-radius:50%;
+              background:#ffffff;
+              position:absolute;
+              top:50%;
+              left:50%;
+              transform:translate(-50%,-50%);
+            "></div>
+          </div>
+
+          <div style="
+            position:absolute;
+            top:30px;
+            width:4px;
+            height:20px;
+            border-radius:999px;
+            background:#dc2626;
+            box-shadow:0 1px 3px rgba(0,0,0,0.25);
+          "></div>
+        </div>
+      `,
+      iconSize: [38, 54],
+      iconAnchor: [19, 51],
+      popupAnchor: [0, -48],
+    })
+
+  /*
    * ==========================================================
    * FIT MAP TO CLIENT BUILDINGS
    *
@@ -584,7 +640,298 @@ export default function MapContainer() {
         }
       }
 
+
+      /*
+       * FINAL CATEGORY-LIST SELECTION
+       *
+       * The selected list item carries the exact GeoJSON feature.
+       * Locate that feature and open its popup. This is independent
+       * of the category name, so it works for parks, schools,
+       * community centers, government buildings, landmarks and
+       * bus stops.
+       */
+      if (selectedLandmark.fromCategory === true && feature) {
+        try {
+          const featureLayer = L.geoJSON(feature)
+          const bounds = featureLayer.getBounds()
+
+          const props = feature.properties || {}
+
+          const placeName =
+            selectedLandmark.name ||
+            props.landmarkName ||
+            props.bldg_namee ||
+            props.name ||
+            props.Name ||
+            'Selected Place'
+
+          const placeNo =
+            selectedLandmark.landmarkNo ??
+            selectedLandmark.bldg_no ??
+            selectedLandmark.stopNo ??
+            props.landmarkNo ??
+            props.bldg_no ??
+            props.No ??
+            props.no ??
+            ''
+
+          let lat = selectedLandmark.latitude
+          let lng = selectedLandmark.longitude
+
+          if (bounds.isValid()) {
+            const center = bounds.getCenter()
+            lat = center.lat
+            lng = center.lng
+
+            mapRef.current.fitBounds(bounds, {
+              padding: [55, 55],
+              maxZoom: DETAIL_ZOOM,
+              animate: true,
+            })
+          } else if (
+            Number.isFinite(Number(lat)) &&
+            Number.isFinite(Number(lng))
+          ) {
+            mapRef.current.flyTo(
+              [Number(lat), Number(lng)],
+              DETAIL_ZOOM,
+              { duration: 0.8 },
+            )
+          } else {
+            return
+          }
+
+          const googleMapsUrl =
+            `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+
+          const popupContent = `
+            <div style="
+              font-family:system-ui,sans-serif;
+              min-width:235px;
+              line-height:1.5;
+              color:#0f172a;
+            ">
+              <div style="
+                font-size:17px;
+                font-weight:800;
+                margin-bottom:9px;
+              ">
+                ${placeName}
+              </div>
+
+              ${
+                String(placeNo ?? '').trim()
+                  ? `
+                    <div style="
+                      font-size:14px;
+                      margin-bottom:10px;
+                    ">
+                      <strong>No:</strong> ${placeNo}
+                    </div>
+                  `
+                  : ''
+              }
+
+              <a
+                href="${googleMapsUrl}"
+                target="_blank"
+                rel="noopener noreferrer"
+                style="
+                  display:block;
+                  width:100%;
+                  box-sizing:border-box;
+                  text-align:center;
+                  text-decoration:none;
+                  background:#009f91;
+                  color:white;
+                  padding:10px 12px;
+                  border-radius:10px;
+                  font-size:13px;
+                  font-weight:700;
+                "
+              >
+                Open in Google Maps
+              </a>
+            </div>
+          `
+
+          L.popup({
+            maxWidth: 320,
+            closeButton: true,
+          })
+            .setLatLng([lat, lng])
+            .setContent(popupContent)
+
+
+          return
+        } catch (categoryError) {
+          console.error(
+            'Category place focus failed:',
+            categoryError,
+          )
+          return
+        }
+      }
+
       const destination = getFeatureLatLng(feature)
+
+      /*
+       * BUILDING / LANDMARK SELECTION
+       *
+       * Every building and every corporation landmark gets the
+       * same red lollipop marker. Its information opens in a
+       * popup at the real polygon center.
+       */
+      if (
+        destination &&
+        (
+          selectedLandmark.sourceCategory === 'building' ||
+          selectedLandmark.sourceCategory === 'corporationLandmark'
+        )
+      ) {
+        try {
+          if (
+            feature.geometry?.type === 'Polygon' ||
+            feature.geometry?.type === 'MultiPolygon'
+          ) {
+            const selectedLayer = L.geoJSON(feature)
+            const bounds = selectedLayer.getBounds()
+
+            if (bounds.isValid()) {
+              mapRef.current.fitBounds(bounds, {
+                padding: [56, 56],
+                maxZoom: DETAIL_ZOOM,
+                animate: true,
+              })
+            }
+          } else {
+            mapRef.current.flyTo(
+              [destination.lat, destination.lng],
+              DETAIL_ZOOM,
+              { duration: 0.8 },
+            )
+          }
+
+          const props = feature?.properties || {}
+
+          const isLandmark =
+            selectedLandmark.sourceCategory ===
+            'corporationLandmark'
+
+          const placeName =
+            selectedLandmark.name ||
+            props.landmarkName ||
+            props.bldg_namee ||
+            props.bldg_name ||
+            props.building_name ||
+            props.name ||
+            props.Name ||
+            'Selected Place'
+
+          const placeNo =
+            isLandmark
+              ? (
+                  selectedLandmark.landmarkNo ??
+                  props.landmarkNo ??
+                  '—'
+                )
+              : (
+                  selectedLandmark.bldg_no ??
+                  props.bldg_no ??
+                  props.building_no ??
+                  props.No ??
+                  props.no ??
+                  ''
+                )
+
+          const title =
+            isLandmark
+              ? 'Landmark'
+              : 'Building'
+
+          const googleMapsUrl =
+            `https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}`
+
+          const popupContent = `
+            <div style="
+              font-family:system-ui,sans-serif;
+              min-width:240px;
+              line-height:1.5;
+              color:#0f172a;
+            ">
+              <div style="
+                font-size:17px;
+                font-weight:800;
+                color:#dc2626;
+                margin-bottom:8px;
+              ">
+                ${title}
+              </div>
+
+              <div style="
+                font-size:14px;
+                margin-bottom:7px;
+              ">
+                <strong>Name:</strong><br/>
+                ${placeName}
+              </div>
+
+              ${
+                String(placeNo ?? '').trim()
+                  ? `
+                    <div style="
+                      font-size:14px;
+                      margin-bottom:12px;
+                    ">
+                      <strong>No:</strong> ${placeNo}
+                    </div>
+                  `
+                  : ''
+              }
+
+              <a
+                href="${googleMapsUrl}"
+                target="_blank"
+                rel="noopener noreferrer"
+                style="
+                  display:block;
+                  width:100%;
+                  box-sizing:border-box;
+                  text-align:center;
+                  text-decoration:none;
+                  background:#dc2626;
+                  color:#ffffff;
+                  padding:10px 12px;
+                  border-radius:10px;
+                  font-size:13px;
+                  font-weight:700;
+                "
+              >
+                Open in Google Maps
+              </a>
+            </div>
+          `
+
+          L.popup({
+            maxWidth: 320,
+            closeButton: true,
+          })
+            .setLatLng([
+              destination.lat,
+              destination.lng,
+            ])
+            .setContent(popupContent)
+
+
+          return
+        } catch (error) {
+          console.error(
+            'Unable to focus selected building/landmark:',
+            error,
+          )
+          return
+        }
+      }
 
       // CATEGORY-LIST PLACE SELECTION
       // For parks, education, community centers, government buildings
@@ -668,7 +1015,7 @@ export default function MapContainer() {
             })
               .setLatLng(selectedBounds.getCenter())
               .setContent(popupContent)
-              .openOn(mapRef.current)
+  
 
             return
           }
@@ -722,7 +1069,7 @@ export default function MapContainer() {
           })
             .setLatLng([destination.lat, destination.lng])
             .setContent(popupContent)
-            .openOn(mapRef.current)
+
         }
 
         return
@@ -763,7 +1110,7 @@ export default function MapContainer() {
           L.popup({ maxWidth: 320, closeButton: true })
             .setLatLng([destination.lat, destination.lng])
             .setContent(popupContent)
-            .openOn(mapRef.current)
+
 
           setSelectedLandmark({ ...selectedLandmark, fromSearch: false })
         }
@@ -818,7 +1165,7 @@ export default function MapContainer() {
           L.popup({ maxWidth: 300, closeButton: true })
             .setLatLng([destination.lat, destination.lng])
             .setContent(popupContent)
-            .openOn(mapRef.current)
+
 
           setSelectedLandmark({ ...selectedLandmark, fromSearch: false })
         }
@@ -1551,7 +1898,7 @@ export default function MapContainer() {
 
     const url = origin
       ? `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destinationText}&travelmode=walking`
-      : `https://www.google.com/maps/search/?api=1&query=${destinationText}`
+      : `https://www.google.com/maps/dir/?api=1&destination=${destinationText}&travelmode=walking`
 
     window.open(
       url,
@@ -1566,6 +1913,44 @@ export default function MapContainer() {
    * ==========================================================
    */
 
+  // Keep the browser fullscreen surface clean.
+  useEffect(() => {
+    if (!isFullscreen) return
+
+    const previousBody = document.body.style.background
+    const previousHtml = document.documentElement.style.background
+
+    document.body.style.background = '#ffffff'
+    document.documentElement.style.background = '#ffffff'
+
+    return () => {
+      document.body.style.background = previousBody
+      document.documentElement.style.background = previousHtml
+    }
+  }, [isFullscreen])
+
+  const resizeLeafletMap = () => {
+    if (!mapRef.current) return
+
+    // Leaflet needs an explicit size refresh after the container
+    // changes dimensions (especially when entering fullscreen).
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        try {
+          mapRef.current.invalidateSize({
+            pan: false,
+            debounceMoveend: true,
+          })
+        } catch (error) {
+          console.warn(
+            'Unable to resize Leaflet map:',
+            error,
+          )
+        }
+      })
+    })
+  }
+
   const toggleFullscreen =
     async () => {
       if (!mapWrapperRef.current) {
@@ -1573,26 +1958,65 @@ export default function MapContainer() {
       }
 
       try {
-        if (
-          document.fullscreenElement
-        ) {
+        if (document.fullscreenElement) {
           await document.exitFullscreen()
-
-          setIsFullscreen(false)
-
-          return
+        } else {
+          await mapWrapperRef.current.requestFullscreen()
         }
-
-        await mapWrapperRef.current.requestFullscreen()
-
-        setIsFullscreen(true)
       } catch (error) {
         console.warn(
           'Fullscreen failed:',
-          error
+          error,
         )
       }
     }
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active =
+        document.fullscreenElement ===
+        mapWrapperRef.current
+
+      setIsFullscreen(active)
+
+      // Wait for the browser to apply the new fullscreen
+      // dimensions before asking Leaflet to recalculate.
+      resizeLeafletMap()
+
+      if (active && mapRef.current) {
+        setTimeout(() => {
+          try {
+            mapRef.current.invalidateSize({
+              pan: false,
+              debounceMoveend: true,
+            })
+          } catch {}
+        }, 250)
+      }
+    }
+
+    document.addEventListener(
+      'fullscreenchange',
+      handleFullscreenChange,
+    )
+
+    window.addEventListener(
+      'resize',
+      resizeLeafletMap,
+    )
+
+    return () => {
+      document.removeEventListener(
+        'fullscreenchange',
+        handleFullscreenChange,
+      )
+
+      window.removeEventListener(
+        'resize',
+        resizeLeafletMap,
+      )
+    }
+  }, [])
 
   /*
    * ==========================================================
@@ -1755,7 +2179,11 @@ export default function MapContainer() {
 
         <div
           ref={mapWrapperRef}
-          className="relative w-full bg-slate-100 h-[clamp(360px,62vw,560px)] sm:h-[420px] lg:h-[520px] xl:h-[560px]"
+          className={`relative w-full bg-slate-100 ${
+            isFullscreen
+              ? 'h-screen min-h-screen rounded-none'
+              : 'h-[clamp(360px,62vw,560px)] sm:h-[420px] lg:h-[520px] xl:h-[560px]'
+          }`}
           style={{
             touchAction: 'auto',
           }}
@@ -1793,6 +2221,12 @@ export default function MapContainer() {
             </div>
           )}
 
+          <style>{`
+            .gis-map-black-white .leaflet-tile-pane {
+              filter: grayscale(100%) contrast(92%) brightness(103%);
+            }
+          `}</style>
+
           <LeafletMap
             ref={mapRef}
             center={[
@@ -1813,7 +2247,7 @@ export default function MapContainer() {
               isTouchDevice ? mapInteractionActive : true
             }
             zoomControl={true}
-            className="h-full w-full"
+            className="gis-map-black-white h-full w-full"
             eventHandlers={{
               click: () => {
                 if (isTouchDevice) {
@@ -2077,9 +2511,7 @@ export default function MapContainer() {
                       .setContent(
                         popupContent,
                       )
-                      .openOn(
-                        mapRef.current,
-                      )
+
                   }
 
                   setToast({
@@ -2148,37 +2580,6 @@ export default function MapContainer() {
                     ]}
                     icon={createLollipopIcon(placeCategory)}
                   >
-                    <Popup closeButton={true}>
-                      <div
-                        style={{
-                          minWidth: '190px',
-                          fontFamily: 'system-ui, sans-serif',
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '15px',
-                            fontWeight: 800,
-                            marginBottom: '6px',
-                            color: '#0f172a',
-                          }}
-                        >
-                          {place.name}
-                        </div>
-
-                        {place.number ? (
-                          <div
-                            style={{
-                              fontSize: '12px',
-                              color: '#64748b',
-                            }}
-                          >
-                            No: {place.number}
-                          </div>
-                        ) : null}
-                      </div>
-                    </Popup>
                   </Marker>
                 )
               })}
@@ -2187,7 +2588,8 @@ export default function MapContainer() {
                 SELECTED LOCATION MARKER
                ================================================= */}
 
-            {selectedLandmark?.sourceCategory === 'building' &&
+            {(selectedLandmark?.sourceCategory === 'building' ||
+              selectedLandmark?.sourceCategory === 'corporationLandmark') &&
               selectedLandmark?.latitude != null &&
               selectedLandmark?.longitude != null && (
                 <Marker
@@ -2195,33 +2597,10 @@ export default function MapContainer() {
                     selectedLandmark.latitude,
                     selectedLandmark.longitude,
                   ]}
-                  icon={L.divIcon({
-                    className: 'selected-building-marker',
-                    html: `
-                      <div style="
-                        width:42px;
-                        height:42px;
-                        border-radius:50% 50% 50% 0;
-                        background:#dc2626;
-                        border:3px solid #ffffff;
-                        box-shadow:0 3px 10px rgba(0,0,0,0.35);
-                        transform:rotate(-45deg);
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                      ">
-                        <div style="
-                          width:12px;
-                          height:12px;
-                          border-radius:50%;
-                          background:#ffffff;
-                        "></div>
-                      </div>
-                    `,
-                    iconSize: [42, 42],
-                    iconAnchor: [21, 42],
-                  })}
-                />
+                  icon={createRedLollipopIcon()}
+                  zIndexOffset={2000}
+                >
+                </Marker>
               )}
 
             {/* =================================================
@@ -2293,6 +2672,7 @@ export default function MapContainer() {
 
           </LeafletMap>
 
+          <div className={isFullscreen ? 'z-[2000]' : ''}>
           <FloatingActionBar
             onLocate={
               focusOnCurrentLocation
@@ -2318,61 +2698,229 @@ export default function MapContainer() {
               focusOnCurrentLocation
             }
           />
+
+          {isFullscreen && selectedLandmark ? (
+            <div className="pointer-events-auto absolute bottom-3 left-3 right-3 z-[2100] sm:left-4 sm:right-4">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/98 shadow-2xl backdrop-blur">
+                <div className="flex flex-col gap-3 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    {(() => {
+                      const source =
+                        selectedLandmark.sourceCategory || ''
+
+                      const isBusStop =
+                        source === 'busStop'
+
+                      const isLandmark =
+                        source === 'corporationLandmark'
+
+                      const isBuilding =
+                        source === 'building'
+
+                      const typeLabel =
+                        isBusStop
+                          ? 'Bus stop'
+                          : isLandmark
+                            ? 'Landmark'
+                            : isBuilding
+                              ? (
+                                  String(
+                                    selectedLandmark.bldg_no ?? '',
+                                  ).trim()
+                                    ? `Building No: ${selectedLandmark.bldg_no}`
+                                    : 'Building'
+                                )
+                              : (
+                                  String(
+                                    selectedLandmark.bldg_no ??
+                                      selectedLandmark.landmarkNo ??
+                                      '',
+                                  ).trim()
+                                    ? `No: ${
+                                        selectedLandmark.bldg_no ??
+                                        selectedLandmark.landmarkNo
+                                      }`
+                                    : getText(
+                                        {
+                                          en: 'Selected place',
+                                          mr: 'निवडलेले ठिकाण',
+                                        },
+                                        language,
+                                      )
+                                )
+
+                      const placeNo =
+                        isBusStop
+                          ? selectedLandmark.stopNo
+                          : isLandmark
+                            ? selectedLandmark.landmarkNo
+                            : selectedLandmark.bldg_no
+
+                      const icon =
+                        isBusStop ? '🚌' : '📍'
+
+                      return (
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${
+                              isBusStop
+                                ? 'bg-green-100'
+                                : 'bg-red-100'
+                            }`}
+                          >
+                            {icon}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-slate-900">
+                              {selectedLandmark.name ||
+                                getText(
+                                  {
+                                    en: 'Selected place',
+                                    mr: 'निवडलेले ठिकाण',
+                                  },
+                                  language,
+                                )}
+                            </p>
+
+                            <p className="text-xs text-slate-500">
+                              {String(placeNo ?? '').trim()
+                                ? `${typeLabel.includes('No:') ? '' : typeLabel + ' • '}No: ${placeNo}`
+                                : typeLabel}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-3">
+                    {routeDetails ? (
+                      <>
+                        <span className="flex items-center gap-1">
+                          <Route size={14} />
+                          {routeDetails.walkingDistance} km
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock3 size={14} />
+                          {routeDetails.walkingTime} min walk
+                        </span>
+                      </>
+                    ) : null}
+
+                    {selectedLandmark.feature ? (
+                      <button
+                        type="button"
+                        onClick={openGoogleMaps}
+                        className="rounded-full bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-teal-700 active:scale-[0.98]"
+                      >
+                        Get Direction
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          </div>
         </div>
 
         {/* =====================================================
             SELECTED LOCATION DETAILS / STATUS BAR
+            All place details are shown here — not in map popups.
            ===================================================== */}
         <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 flex-1">
-            {selectedLandmark?.sourceCategory === 'building' ? (
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-lg">
-                  📍
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-slate-900">
-                    {selectedLandmark.name || 'Building'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {String(selectedLandmark.bldg_no ?? '').trim()
-                      ? `Building No: ${selectedLandmark.bldg_no}`
-                      : 'Building number not assigned'}
-                  </p>
-                </div>
-              </div>
-            ) : selectedLandmark?.sourceCategory === 'busStop' ? (
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 text-lg">
-                  🚌
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-slate-900">
-                    {selectedLandmark.name || 'Bus Stop'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {String(selectedLandmark.stopNo ?? '').trim()
-                      ? `Stop No: ${selectedLandmark.stopNo}`
-                      : 'Bus stop'}
-                  </p>
-                </div>
-              </div>
-            ) : selectedLandmark?.sourceCategory === 'corporationLandmark' ? (
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-100 text-lg">
-                  📍
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-slate-900">
-                    {selectedLandmark.name || 'Landmark'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {String(selectedLandmark.landmarkNo ?? '').trim()
-                      ? `Landmark No: ${selectedLandmark.landmarkNo}`
-                      : 'Corporation Landmark'}
-                  </p>
-                </div>
-              </div>
+            {selectedLandmark ? (
+              (() => {
+                const source =
+                  selectedLandmark.sourceCategory || ''
+
+                const isBusStop =
+                  source === 'busStop'
+
+                const isLandmark =
+                  source === 'corporationLandmark'
+
+                const isBuilding =
+                  source === 'building'
+
+                const typeLabel =
+                  isBusStop
+                    ? 'Bus stop'
+                    : isLandmark
+                      ? 'Landmark'
+                      : isBuilding
+                        ? (
+                            String(
+                              selectedLandmark.bldg_no ?? '',
+                            ).trim()
+                              ? `Building No: ${selectedLandmark.bldg_no}`
+                              : 'Building'
+                          )
+                        : (
+                            String(
+                              selectedLandmark.bldg_no ??
+                                selectedLandmark.landmarkNo ??
+                                '',
+                            ).trim()
+                              ? `No: ${
+                                  selectedLandmark.bldg_no ??
+                                  selectedLandmark.landmarkNo
+                                }`
+                              : getText(
+                                  {
+                                    en: 'Selected place',
+                                    mr: 'निवडलेले ठिकाण',
+                                  },
+                                  language,
+                                )
+                          )
+
+                const placeNo =
+                  isBusStop
+                    ? selectedLandmark.stopNo
+                    : isLandmark
+                      ? selectedLandmark.landmarkNo
+                      : selectedLandmark.bldg_no
+
+                const icon =
+                  isBusStop ? '🚌' : '📍'
+
+                return (
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${
+                        isBusStop
+                          ? 'bg-green-100'
+                          : 'bg-red-100'
+                      }`}
+                    >
+                      {icon}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-slate-900">
+                        {selectedLandmark.name ||
+                          getText(
+                            {
+                              en: 'Selected place',
+                              mr: 'निवडलेले ठिकाण',
+                            },
+                            language,
+                          )}
+                      </p>
+
+                      <p className="text-xs text-slate-500">
+                        {String(placeNo ?? '').trim()
+                          ? `${typeLabel.includes('No:') ? '' : typeLabel + ' • '}No: ${placeNo}`
+                          : typeLabel}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })()
             ) : (
               <div className="flex items-center gap-2">
                 <MapPin size={14} />
@@ -2381,7 +2929,7 @@ export default function MapContainer() {
                     en: 'Live GPS tracking',
                     mr: 'थेट GPS ट्रॅकिंग',
                   },
-                  language
+                  language,
                 )}
               </div>
             )}
@@ -2402,14 +2950,13 @@ export default function MapContainer() {
             ) : null}
 
             {selectedLandmark &&
-              selectedLandmark.latitude != null &&
-              selectedLandmark.longitude != null && (
+              selectedLandmark.feature && (
                 <button
                   type="button"
                   onClick={openGoogleMaps}
                   className="rounded-full bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-teal-700 active:scale-[0.98]"
                 >
-                  Open in Google Maps
+                  Get Direction
                 </button>
               )}
           </div>
