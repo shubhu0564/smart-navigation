@@ -348,31 +348,8 @@ export default function GeoJsonLayer({
         { maxWidth: 300, closeButton: true }
       )
     } else if (layerKey === 'landmarks') {
-      const props = feature?.properties || {}
-
-      const landmarkName =
-        props.landmarkName ??
-        props.name ??
-        props.Name ??
-        props.landmark_name ??
-        ''
-
-      const landmarkNo =
-        props.landmarkNo ??
-        props.landmark_no ??
-        props.No ??
-        props.no ??
-        ''
-
-      const cleanName = String(landmarkName ?? '').trim()
-      const cleanNo = String(landmarkNo ?? '').trim()
-
-      // Landmark names are NOT displayed permanently on the map.
-
-      layer.bindPopup(
-        renderPopupContent(feature),
-        { maxWidth: 320, closeButton: true }
-      )
+      // Landmark selection is handled by React state in MapContainer.
+      // Do not create a Leaflet popup here.
     } else if (feature?.properties?.name) {
       layer.bindPopup(
         renderPopupContent(feature),
@@ -387,7 +364,11 @@ export default function GeoJsonLayer({
       click: () => {
         // Building click is handled by MapContainer so it can add
         // the Google Maps button and select the building.
-        if (layerKey === 'buildings' || layerKey === 'clientBuildings') {
+        if (
+          layerKey === 'buildings' ||
+          layerKey === 'clientBuildings' ||
+          layerKey === 'landmarks'
+        ) {
           layer.closePopup?.()
         } else {
           layer.openPopup?.()

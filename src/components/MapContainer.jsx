@@ -6,7 +6,7 @@ import {
   Marker,
   Circle,
   Polyline,
-  Popup,
+  GeoJSON,
 } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet-routing-machine'
@@ -16,7 +16,7 @@ import {
   Route,
   Clock3,
 } from 'lucide-react'
-
+import { Maximize2 } from 'lucide-react'
 import { useNavigation } from '../hooks/useNavigation'
 import { useLiveLocation } from '../hooks/useLiveLocation'
 import { getText } from '../utils/helpers'
@@ -54,6 +54,8 @@ export default function MapContainer() {
   const [route, setRoute] = useState(null)
   const [routeDetails, setRouteDetails] = useState(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const INITIAL_MAP_ZOOM = 16
+const [showMapActions, setShowMapActions] = useState(false)
 
   // On phones, keep the map passive so normal page scrolling works.
   // The user activates map gestures by tapping the map.
@@ -455,7 +457,7 @@ export default function MapContainer() {
             width:32px;
             height:32px;
             border-radius:50%;
-            background:#dc2626;
+            background:#8B0000;
             border:3px solid #ffffff;
             box-shadow:0 3px 10px rgba(0,0,0,0.35);
           ">
@@ -477,7 +479,7 @@ export default function MapContainer() {
             width:4px;
             height:20px;
             border-radius:999px;
-            background:#dc2626;
+            background:#8B0000;
             box-shadow:0 1px 3px rgba(0,0,0,0.25);
           "></div>
         </div>
@@ -588,26 +590,27 @@ export default function MapContainer() {
   useEffect(() => {
     if (!selectedLandmark || !mapRef.current) return
 
-    // Category card selection: display all places in the
-    // category as lollipop markers and fit the map to them.
+    mapRef.current.closePopup()
+
+    // Category card: fit to the complete category only.
+    // The list remains below the map and no place is selected yet.
     if (
       selectedLandmark.sourceCategory === 'categoryGroup' &&
       Array.isArray(selectedLandmark.categoryPlaces) &&
       selectedLandmark.categoryPlaces.length > 0
     ) {
-      const bounds = getCategoryPlaceBounds(
-        selectedLandmark.categoryPlaces,
-      )
+      const features = selectedLandmark.categoryPlaces
+        .map((place) => place?.feature)
+        .filter(Boolean)
 
-      if (bounds) {
-        if (selectedLandmark.categoryPlaces.length === 1) {
-          const center = bounds.getCenter()
-          mapRef.current.flyTo(
-            [center.lat, center.lng],
-            DETAIL_ZOOM,
-            { duration: 0.7 },
-          )
-        } else {
+      if (features.length > 0) {
+        const layer = L.geoJSON({
+          type: 'FeatureCollection',
+          features,
+        })
+        const bounds = layer.getBounds()
+
+        if (bounds.isValid()) {
           mapRef.current.fitBounds(bounds, {
             padding: [55, 55],
             maxZoom: 17.2,
@@ -623,552 +626,80 @@ export default function MapContainer() {
     if (!feature) return
 
     try {
-      // Only a real Search result should auto-scroll the webpage to the GIS map.
-      // Clicking a category place should locate it on the map but must NOT hijack page scrolling.
       const isSearchSelection =
         selectedLandmark.fromSearch === true &&
         selectedLandmark.fromCategory !== true
 
-      if (isSearchSelection) {
+      if (isSearchSelection && mapWrapperRef.current) {
         setMapInteractionActive(true)
-
-        if (mapWrapperRef.current) {
-          mapWrapperRef.current.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-          })
-        }
+        mapWrapperRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        })
       }
 
+      // Category-list selection: focus the exact GIS feature.
+      // No Leaflet popup. The React red overlay handles highlighting.
+      if (selectedLandmark.fromCategory === true) {
+        const featureLayer = L.geoJSON(feature)
+        const bounds = featureLayer.getBounds()
 
-      /*
-       * FINAL CATEGORY-LIST SELECTION
-       *
-       * The selected list item carries the exact GeoJSON feature.
-       * Locate that feature and open its popup. This is independent
-       * of the category name, so it works for parks, schools,
-       * community centers, government buildings, landmarks and
-       * bus stops.
-       */
-      if (selectedLandmark.fromCategory === true && feature) {
-        try {
-          const featureLayer = L.geoJSON(feature)
-          const bounds = featureLayer.getBounds()
-
-          const props = feature.properties || {}
-
-          const placeName =
-            selectedLandmark.name ||
-            props.landmarkName ||
-            props.bldg_namee ||
-            props.name ||
-            props.Name ||
-            'Selected Place'
-
-          const placeNo =
-            selectedLandmark.landmarkNo ??
-            selectedLandmark.bldg_no ??
-            selectedLandmark.stopNo ??
-            props.landmarkNo ??
-            props.bldg_no ??
-            props.No ??
-            props.no ??
-            ''
-
-          let lat = selectedLandmark.latitude
-          let lng = selectedLandmark.longitude
-
-          if (bounds.isValid()) {
-            const center = bounds.getCenter()
-            lat = center.lat
-            lng = center.lng
-
-            mapRef.current.fitBounds(bounds, {
-              padding: [55, 55],
-              maxZoom: DETAIL_ZOOM,
-              animate: true,
-            })
-          } else if (
-            Number.isFinite(Number(lat)) &&
-            Number.isFinite(Number(lng))
-          ) {
-            mapRef.current.flyTo(
-              [Number(lat), Number(lng)],
-              DETAIL_ZOOM,
-              { duration: 0.8 },
-            )
-          } else {
-            return
-          }
-
-          const googleMapsUrl =
-            `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-
-          const popupContent = `
-            <div style="
-              font-family:system-ui,sans-serif;
-              min-width:235px;
-              line-height:1.5;
-              color:#0f172a;
-            ">
-              <div style="
-                font-size:17px;
-                font-weight:800;
-                margin-bottom:9px;
-              ">
-                ${placeName}
-              </div>
-
-              ${
-                String(placeNo ?? '').trim()
-                  ? `
-                    <div style="
-                      font-size:14px;
-                      margin-bottom:10px;
-                    ">
-                      <strong>No:</strong> ${placeNo}
-                    </div>
-                  `
-                  : ''
-              }
-
-              <a
-                href="${googleMapsUrl}"
-                target="_blank"
-                rel="noopener noreferrer"
-                style="
-                  display:block;
-                  width:100%;
-                  box-sizing:border-box;
-                  text-align:center;
-                  text-decoration:none;
-                  background:#009f91;
-                  color:white;
-                  padding:10px 12px;
-                  border-radius:10px;
-                  font-size:13px;
-                  font-weight:700;
-                "
-              >
-                Open in Google Maps
-              </a>
-            </div>
-          `
-
-          L.popup({
-            maxWidth: 320,
-            closeButton: true,
+        if (bounds.isValid()) {
+          mapRef.current.fitBounds(bounds, {
+            padding: [60, 60],
+            maxZoom: DETAIL_ZOOM,
+            animate: true,
           })
-            .setLatLng([lat, lng])
-            .setContent(popupContent)
-
-
-          return
-        } catch (categoryError) {
-          console.error(
-            'Category place focus failed:',
-            categoryError,
-          )
-          return
-        }
-      }
-
-      const destination = getFeatureLatLng(feature)
-
-      /*
-       * BUILDING / LANDMARK SELECTION
-       *
-       * Every building and every corporation landmark gets the
-       * same red lollipop marker. Its information opens in a
-       * popup at the real polygon center.
-       */
-      if (
-        destination &&
-        (
-          selectedLandmark.sourceCategory === 'building' ||
-          selectedLandmark.sourceCategory === 'corporationLandmark'
-        )
-      ) {
-        try {
-          if (
-            feature.geometry?.type === 'Polygon' ||
-            feature.geometry?.type === 'MultiPolygon'
-          ) {
-            const selectedLayer = L.geoJSON(feature)
-            const bounds = selectedLayer.getBounds()
-
-            if (bounds.isValid()) {
-              mapRef.current.fitBounds(bounds, {
-                padding: [56, 56],
-                maxZoom: DETAIL_ZOOM,
-                animate: true,
-              })
-            }
-          } else {
+        } else {
+          const destination = getFeatureLatLng(feature)
+          if (destination) {
             mapRef.current.flyTo(
               [destination.lat, destination.lng],
               DETAIL_ZOOM,
               { duration: 0.8 },
             )
           }
-
-          const props = feature?.properties || {}
-
-          const isLandmark =
-            selectedLandmark.sourceCategory ===
-            'corporationLandmark'
-
-          const placeName =
-            selectedLandmark.name ||
-            props.landmarkName ||
-            props.bldg_namee ||
-            props.bldg_name ||
-            props.building_name ||
-            props.name ||
-            props.Name ||
-            'Selected Place'
-
-          const placeNo =
-            isLandmark
-              ? (
-                  selectedLandmark.landmarkNo ??
-                  props.landmarkNo ??
-                  '—'
-                )
-              : (
-                  selectedLandmark.bldg_no ??
-                  props.bldg_no ??
-                  props.building_no ??
-                  props.No ??
-                  props.no ??
-                  ''
-                )
-
-          const title =
-            isLandmark
-              ? 'Landmark'
-              : 'Building'
-
-          const googleMapsUrl =
-            `https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}`
-
-          const popupContent = `
-            <div style="
-              font-family:system-ui,sans-serif;
-              min-width:240px;
-              line-height:1.5;
-              color:#0f172a;
-            ">
-              <div style="
-                font-size:17px;
-                font-weight:800;
-                color:#dc2626;
-                margin-bottom:8px;
-              ">
-                ${title}
-              </div>
-
-              <div style="
-                font-size:14px;
-                margin-bottom:7px;
-              ">
-                <strong>Name:</strong><br/>
-                ${placeName}
-              </div>
-
-              ${
-                String(placeNo ?? '').trim()
-                  ? `
-                    <div style="
-                      font-size:14px;
-                      margin-bottom:12px;
-                    ">
-                      <strong>No:</strong> ${placeNo}
-                    </div>
-                  `
-                  : ''
-              }
-
-              <a
-                href="${googleMapsUrl}"
-                target="_blank"
-                rel="noopener noreferrer"
-                style="
-                  display:block;
-                  width:100%;
-                  box-sizing:border-box;
-                  text-align:center;
-                  text-decoration:none;
-                  background:#dc2626;
-                  color:#ffffff;
-                  padding:10px 12px;
-                  border-radius:10px;
-                  font-size:13px;
-                  font-weight:700;
-                "
-              >
-                Open in Google Maps
-              </a>
-            </div>
-          `
-
-          L.popup({
-            maxWidth: 320,
-            closeButton: true,
-          })
-            .setLatLng([
-              destination.lat,
-              destination.lng,
-            ])
-            .setContent(popupContent)
-
-
-          return
-        } catch (error) {
-          console.error(
-            'Unable to focus selected building/landmark:',
-            error,
-          )
-          return
-        }
-      }
-
-      // CATEGORY-LIST PLACE SELECTION
-      // For parks, education, community centers, government buildings
-      // and landmarks, the selected list item must locate the exact
-      // feature and immediately show its popup. Search behavior remains
-      // unchanged below.
-      if (selectedLandmark.fromCategory === true) {
-        if (
-          feature.geometry?.type === 'Polygon' ||
-          feature.geometry?.type === 'MultiPolygon'
-        ) {
-          const selectedLayer = L.geoJSON(feature)
-          const selectedBounds = selectedLayer.getBounds()
-
-          if (selectedBounds.isValid()) {
-            mapRef.current.fitBounds(selectedBounds, {
-              padding: [70, 70],
-              maxZoom: DETAIL_ZOOM,
-              animate: true,
-            })
-
-            const props = feature?.properties || {}
-            const placeName =
-              selectedLandmark.name ||
-              props.landmarkName ||
-              props.bldg_namee ||
-              props.bldg_name ||
-              props.building_name ||
-              props.name ||
-              props.Name ||
-              'Selected Place'
-
-            const placeNo =
-              selectedLandmark.landmarkNo ??
-              props.landmarkNo ??
-              props.bldg_no ??
-              props.building_no ??
-              props.No ??
-              props.no ??
-              ''
-
-            const googleMapsUrl =
-              `https://www.google.com/maps/search/?api=1&query=${selectedBounds.getCenter().lat},${selectedBounds.getCenter().lng}`
-
-            const popupContent = `
-              <div style="font-family:system-ui,sans-serif;min-width:235px;line-height:1.5;color:#0f172a;">
-                <div style="font-size:17px;font-weight:800;margin-bottom:9px;">
-                  ${placeName}
-                </div>
-                ${
-                  String(placeNo ?? '').trim()
-                    ? `<div style="font-size:14px;margin-bottom:10px;"><strong>No:</strong> ${placeNo}</div>`
-                    : ''
-                }
-                <a
-                  href="${googleMapsUrl}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style="
-                    display:block;
-                    width:100%;
-                    box-sizing:border-box;
-                    text-align:center;
-                    text-decoration:none;
-                    background:#009f91;
-                    color:white;
-                    padding:10px 12px;
-                    border-radius:10px;
-                    font-size:13px;
-                    font-weight:700;
-                  "
-                >
-                  Open in Google Maps
-                </a>
-              </div>
-            `
-
-            L.popup({
-              maxWidth: 320,
-              closeButton: true,
-            })
-              .setLatLng(selectedBounds.getCenter())
-              .setContent(popupContent)
-  
-
-            return
-          }
-        }
-
-        // Point feature selected from the category list.
-        if (destination) {
-          mapRef.current.flyTo(
-            [destination.lat, destination.lng],
-            DETAIL_ZOOM,
-            { duration: 0.8 },
-          )
-
-          const placeName =
-            selectedLandmark.name || 'Selected Place'
-
-          const googleMapsUrl =
-            `https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}`
-
-          const popupContent = `
-            <div style="font-family:system-ui,sans-serif;min-width:220px;line-height:1.5;color:#0f172a;">
-              <div style="font-size:17px;font-weight:800;margin-bottom:10px;">
-                ${placeName}
-              </div>
-              <a
-                href="${googleMapsUrl}"
-                target="_blank"
-                rel="noopener noreferrer"
-                style="
-                  display:block;
-                  width:100%;
-                  box-sizing:border-box;
-                  text-align:center;
-                  text-decoration:none;
-                  background:#009f91;
-                  color:white;
-                  padding:10px 12px;
-                  border-radius:10px;
-                  font-size:13px;
-                  font-weight:700;
-                "
-              >
-                Open in Google Maps
-              </a>
-            </div>
-          `
-
-          L.popup({
-            maxWidth: 320,
-            closeButton: true,
-          })
-            .setLatLng([destination.lat, destination.lng])
-            .setContent(popupContent)
-
         }
 
         return
       }
 
-      // Search -> Bus Stop: exact stop, slight zoom, immediate popup.
-      if (selectedLandmark.sourceCategory === 'busStop' && destination) {
-        mapRef.current.flyTo(
-          [destination.lat, destination.lng],
-          DETAIL_ZOOM,
-          { duration: 0.9 }
-        )
-
-        if (selectedLandmark.fromSearch !== false) {
-          const props = feature?.properties || {}
-
-          const stopNo =
-            props.No ?? props.no ??
-            props.Number ?? props.number ??
-            props.stop_no ?? props.stopNo ?? ''
-
-          const stopName =
-            props.Name ?? props.name ?? props.NAME ??
-            props.stop_name ?? props.stopName ??
-            selectedLandmark.name ?? 'Bus Stop'
-
-          const cleanNo = String(stopNo ?? '').trim()
-          const cleanName = String(stopName ?? '').trim()
-
-          const popupContent = `
-            <div style="font-family:system-ui,sans-serif;min-width:230px;line-height:1.5;color:#0f172a;">
-              <div style="font-size:17px;font-weight:800;margin-bottom:9px;color:#1d4ed8;">Bus Stop</div>
-              ${cleanNo ? `<div style="font-size:14px;margin-bottom:6px;"><strong>Stop No:</strong> ${cleanNo}</div>` : ''}
-              <div style="font-size:14px;"><strong>Name:</strong><br/>${cleanName || 'Bus Stop'}</div>
-            </div>
-          `
-
-          L.popup({ maxWidth: 320, closeButton: true })
-            .setLatLng([destination.lat, destination.lng])
-            .setContent(popupContent)
-
-
-          setSelectedLandmark({ ...selectedLandmark, fromSearch: false })
-        }
-
-        return
-      }
-
-      // Search -> polygon: fit the actual feature and open popup.
+      // Direct building/landmark selection: focus exact geometry.
       if (
-        feature.geometry?.type === 'Polygon' ||
-        feature.geometry?.type === 'MultiPolygon'
+        selectedLandmark.sourceCategory === 'building' ||
+        selectedLandmark.sourceCategory === 'corporationLandmark'
       ) {
         const layer = L.geoJSON(feature)
         const bounds = layer.getBounds()
 
         if (bounds.isValid()) {
           mapRef.current.fitBounds(bounds, {
-            padding: [56, 56],
+            padding: [60, 60],
             maxZoom: DETAIL_ZOOM,
             animate: true,
           })
-
-          // Building details are shown in the GIS status bar below the map.
-          // Do not open a Leaflet popup here.
-          if (selectedLandmark.fromSearch !== false) {
-            setSelectedLandmark({
-              ...selectedLandmark,
-              fromSearch: false,
-            })
+        } else {
+          const destination = getFeatureLatLng(feature)
+          if (destination) {
+            mapRef.current.flyTo(
+              [destination.lat, destination.lng],
+              DETAIL_ZOOM,
+              { duration: 0.8 },
+            )
           }
-
-          return
         }
+
+        return
       }
 
-      // Other point/landmark search.
+      // Bus stop and other point selections.
+      const destination = getFeatureLatLng(feature)
       if (destination) {
         mapRef.current.flyTo(
           [destination.lat, destination.lng],
           DETAIL_ZOOM,
-          { duration: 0.9 }
+          { duration: 0.8 },
         )
-
-        if (selectedLandmark.fromSearch !== false) {
-          const popupContent = `
-            <div style="font-family:system-ui,sans-serif;min-width:220px;line-height:1.5;color:#0f172a;">
-              <div style="font-size:16px;font-weight:800;margin-bottom:7px;">${selectedLandmark.name || 'Location'}</div>
-              <div style="font-size:13px;">${selectedLandmark.description || ''}</div>
-            </div>
-          `
-
-          L.popup({ maxWidth: 300, closeButton: true })
-            .setLatLng([destination.lat, destination.lng])
-            .setContent(popupContent)
-
-
-          setSelectedLandmark({ ...selectedLandmark, fromSearch: false })
-        }
       }
     } catch (error) {
       console.error('Unable to focus selected feature:', error)
@@ -1386,6 +917,7 @@ export default function MapContainer() {
     }
 
     clearRouting()
+    mapRef.current?.closePopup()
 
     const buildingName =
       properties.bldg_namee ??
@@ -1515,11 +1047,20 @@ export default function MapContainer() {
         ''
 
       clearRouting()
+      mapRef.current?.closePopup()
+
+      const currentBusCategoryPlaces =
+        selectedCategory === 'busStop' &&
+        Array.isArray(selectedLandmark?.categoryPlaces)
+          ? selectedLandmark.categoryPlaces
+          : []
 
       const selected = {
         id:
           properties.id ??
           properties.ID ??
+          properties.stop_id ??
+          properties.stopId ??
           `bus-${latitude}-${longitude}`,
 
         name,
@@ -1551,6 +1092,13 @@ export default function MapContainer() {
         steps: [],
 
         feature,
+        fromSearch: false,
+        fromCategory: true,
+        categoryPlaces: currentBusCategoryPlaces,
+        selectedPlaceIndex: currentBusCategoryPlaces.findIndex(
+          (place) => place?.feature === feature
+        ),
+        selectedPlaceKey: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
       }
 
       setSelectedLandmark(
@@ -1568,22 +1116,6 @@ export default function MapContainer() {
         }
       )
 
-      const cleanNo = String(stopNo ?? '').trim()
-      const cleanName = String(name ?? '').trim()
-
-      const popupContent = `
-        <div style="font-family:system-ui,sans-serif;min-width:220px;line-height:1.5;color:#0f172a;">
-          <div style="font-size:17px;font-weight:800;margin-bottom:9px;color:#1d4ed8;">Bus Stop</div>
-          ${cleanNo ? `<div style="font-size:14px;margin-bottom:6px;"><strong>Stop No:</strong> ${cleanNo}</div>` : ''}
-          <div style="font-size:14px;"><strong>Name:</strong><br/>${cleanName || 'Bus Stop'}</div>
-        </div>
-      `
-
-      L.popup({ maxWidth: 320, closeButton: true })
-        .setLatLng([latitude, longitude])
-        .setContent(popupContent)
-        .openOn(mapRef.current)
-
       setToast({
         en: `${name} selected`,
         mr: `${name} निवडले`,
@@ -1596,13 +1128,18 @@ export default function MapContainer() {
    * ==========================================================
    */
 
-  const startRouting = () => {
-    if (
-      !selectedLandmark ||
-      !mapRef.current
-    ) {
-      return
-    }
+ const startRouting = () => {
+  if (!mapRef.current) {
+    return
+  }
+
+  if (!selectedLandmark) {
+    setToast({
+      en: 'Select a place first, then press Get Direction.',
+      mr: 'प्रथम एखादे ठिकाण निवडा, नंतर दिशा दाबा.',
+    })
+    return
+  }
 
     if (!navigator.geolocation) {
       setToast({
@@ -1875,26 +1412,27 @@ export default function MapContainer() {
    */
 
   const openGoogleMaps = () => {
-    if (!selectedLandmark) {
-      return
-    }
-
-    const destination =
-      getFeatureLatLng(
-        selectedLandmark.feature
-      )
+  // If a place is selected, open directions to that place.
+  if (selectedLandmark) {
+    const destination = getFeatureLatLng(
+      selectedLandmark.feature
+    )
 
     if (!destination) {
+      setToast({
+        en: 'Unable to determine this place location.',
+        mr: 'या ठिकाणाचे स्थान निश्चित करता आले नाही.',
+      })
+
       return
     }
 
     const destinationText =
       `${destination.lat},${destination.lng}`
 
-    const origin =
-      position
-        ? `${position.lat},${position.lng}`
-        : ''
+    const origin = position
+      ? `${position.lat},${position.lng}`
+      : ''
 
     const url = origin
       ? `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destinationText}&travelmode=walking`
@@ -1905,8 +1443,34 @@ export default function MapContainer() {
       '_blank',
       'noopener,noreferrer'
     )
+
+    return
   }
 
+  // No place selected:
+  // open Google Maps at the current map location.
+  const mapCenter =
+    mapRef.current?.getCenter()
+
+  const latitude =
+    position?.lat ??
+    mapCenter?.lat ??
+    center.lat
+
+  const longitude =
+    position?.lng ??
+    mapCenter?.lng ??
+    center.lng
+
+  const url =
+    `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
+
+  window.open(
+    url,
+    '_blank',
+    'noopener,noreferrer'
+  )
+}
   /*
    * ==========================================================
    * FULLSCREEN
@@ -2225,6 +1789,11 @@ export default function MapContainer() {
             .gis-map-black-white .leaflet-tile-pane {
               filter: grayscale(100%) contrast(92%) brightness(103%);
             }
+
+            /* No Leaflet popup box on the map. */
+            .leaflet-popup-pane {
+              display: none !important;
+            }
           `}</style>
 
           <LeafletMap
@@ -2233,7 +1802,7 @@ export default function MapContainer() {
               center.lat,
               center.lng,
             ]}
-            zoom={16}
+            zoom={INITIAL_MAP_ZOOM}
             scrollWheelZoom={
               isTouchDevice ? mapInteractionActive : true
             }
@@ -2255,10 +1824,23 @@ export default function MapContainer() {
                 }
               },
             }}
-            whenCreated={(map) => {
-              mapRef.current =
-                map
-            }}
+         whenCreated={(map) => {
+  mapRef.current = map
+
+  // Initial page:
+  // only the right-side fullscreen icon is visible.
+  setShowMapActions(false)
+
+  const handleZoom = () => {
+    const currentZoom = map.getZoom()
+
+    setShowMapActions(
+      currentZoom > INITIAL_MAP_ZOOM
+    )
+  }
+
+  map.on('zoomend', handleZoom)
+}}
           >
 
             {/* =================================================
@@ -2306,7 +1888,6 @@ export default function MapContainer() {
   <GeoJsonLayer
     featureData={clientBuildingsInSite}
     layerKey="clientBuildings"
-    activeFeatureId={selectedLandmark?.id}
     onFeatureClick={handleBuildingClick}
   />
 )}
@@ -2323,7 +1904,7 @@ export default function MapContainer() {
 {/* your existing code — DON'T CHANGE */}            {/* =================================================
                 CORPORATION LANDMARKS
 
-                16 official landmarks
+                Client-approved landmarks
                ================================================= */}
 
             {corporationLandmarks?.features?.length > 0 && (
@@ -2334,11 +1915,10 @@ export default function MapContainer() {
                   selectedCategory === 'landmark' ||
                   selectedCategory === 'landmarks'
                 }
-                activeFeatureId={
-                  selectedLandmark?.id
-                }
                 onFeatureClick={(feature) => {
                   clearRouting()
+
+                                    mapRef.current?.closePopup()
 
                   const properties =
                     feature?.properties || {}
@@ -2426,94 +2006,6 @@ export default function MapContainer() {
                     },
                   )
 
-                  /*
-                   * Google Maps URL.
-                   */
-                  const googleMapsUrl =
-                    `https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lng}`
-
-                  /*
-                   * Popup.
-                   */
-                  const popupContent = `
-                    <div
-                      style="
-                        font-family:system-ui,sans-serif;
-                        min-width:240px;
-                        line-height:1.5;
-                        color:#0f172a;
-                      "
-                    >
-
-                      <div
-                        style="
-                          font-size:17px;
-                          font-weight:800;
-                          margin-bottom:12px;
-                        "
-                      >
-                        Corporation Landmark
-                      </div>
-
-                      <div
-                        style="
-                          font-size:14px;
-                          margin-bottom:8px;
-                        "
-                      >
-                        <strong>Landmark No:</strong>
-                        ${landmarkNo}
-                      </div>
-
-                      <div
-                        style="
-                          font-size:14px;
-                          margin-bottom:14px;
-                        "
-                      >
-                        <strong>Name:</strong><br/>
-                        ${landmarkName}
-                      </div>
-
-                      <a
-                        href="${googleMapsUrl}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style="
-                          display:block;
-                          width:100%;
-                          box-sizing:border-box;
-                          text-align:center;
-                          text-decoration:none;
-                          background:#009f91;
-                          color:white;
-                          padding:11px 14px;
-                          border-radius:12px;
-                          font-size:14px;
-                          font-weight:700;
-                        "
-                      >
-                        Open in Google Maps
-                      </a>
-
-                    </div>
-                  `
-
-                  if (mapRef.current) {
-                    L.popup({
-                      maxWidth: 320,
-                      closeButton: true,
-                    })
-                      .setLatLng([
-                        destination.lat,
-                        destination.lng,
-                      ])
-                      .setContent(
-                        popupContent,
-                      )
-
-                  }
-
                   setToast({
                     en: `${landmarkName} selected`,
                     mr: `${landmarkName} निवडले`,
@@ -2547,7 +2039,6 @@ export default function MapContainer() {
                 <GeoJsonLayer
   featureData={busStopsInSite}
   layerKey="busStops"
-  activeFeatureId={selectedLandmark?.id}
   showLabels={selectedCategory === 'busStop'}
   onFeatureClick={handleBusStopClick}
 />
@@ -2556,51 +2047,71 @@ export default function MapContainer() {
             {/* Landmark point markers are intentionally hidden. Building polygons are the clickable map features. */}
 
                         {/* =================================================
-                 CATEGORY PLACE LOLLIPOP MARKERS
-                ================================================= */}
-
-            {selectedLandmark?.categoryPlaces?.length > 0 &&
-              selectedLandmark?.sourceCategory !== 'building' &&
-              selectedLandmark.categoryPlaces.map((place, index) => {
-                const destination = getFeatureLatLng(place?.feature)
-
-                if (!destination) return null
-
-                const placeCategory =
-                  place?.sourceCategory ||
-                  selectedLandmark?.categoryId ||
-                  'category'
-
-                return (
-                  <Marker
-                    key={`category-place-${index}-${place.name}`}
-                    position={[
-                      destination.lat,
-                      destination.lng,
-                    ]}
-                    icon={createLollipopIcon(placeCategory)}
-                  >
-                  </Marker>
-                )
-              })}
-
-{/* =================================================
-                SELECTED LOCATION MARKER
+                CATEGORY — ALL MATCHING PLACES FULL RED
+                Uses the exact GeoJSON geometry for every matched place.
+                Points are rendered as red circles; polygons are full red.
                ================================================= */}
 
-            {(selectedLandmark?.sourceCategory === 'building' ||
-              selectedLandmark?.sourceCategory === 'corporationLandmark') &&
-              selectedLandmark?.latitude != null &&
-              selectedLandmark?.longitude != null && (
-                <Marker
-                  position={[
-                    selectedLandmark.latitude,
-                    selectedLandmark.longitude,
-                  ]}
-                  icon={createRedLollipopIcon()}
-                  zIndexOffset={2000}
-                >
-                </Marker>
+            {selectedLandmark?.sourceCategory === 'categoryGroup' &&
+              Array.isArray(selectedLandmark.categoryPlaces) && (
+                <GeoJSON
+                  key={`category-red-${selectedLandmark.category}-${selectedLandmark.categoryPlaces.length}`}
+                  data={{
+                    type: 'FeatureCollection',
+                    features: selectedLandmark.categoryPlaces
+                      .map((place) => place?.feature)
+                      .filter(Boolean),
+                  }}
+                  interactive={false}
+                  style={() => ({
+                    color: '#991b1b',
+                    weight: 3,
+                    opacity: 1,
+                    fillColor: '#ef4444',
+                    fillOpacity: 0.78,
+                  })}
+                  pointToLayer={(feature, latlng) =>
+                    L.circleMarker(latlng, {
+                      radius: 9,
+                      color: '#991b1b',
+                      weight: 3,
+                      opacity: 1,
+                      fillColor: '#ef4444',
+                      fillOpacity: 1,
+                    })
+                  }
+                />
+              )}
+
+            {/* =================================================
+                SELECTED PLACE — FULL RED
+                Works for direct building clicks and list clicks.
+               ================================================= */}
+
+            {selectedLandmark?.feature?.geometry &&
+              selectedLandmark.sourceCategory !== 'categoryGroup' && (
+                <GeoJSON
+                  key={`selected-red-${selectedLandmark.id || selectedLandmark.selectedPlaceKey || selectedLandmark.name}`}
+                  data={selectedLandmark.feature}
+                  interactive={false}
+                  style={() => ({
+                    color: '#7f1d1d',
+                    weight: 4,
+                    opacity: 1,
+                    fillColor: '#dc2626',
+                    fillOpacity: 0.9,
+                  })}
+                  pointToLayer={(feature, latlng) =>
+                    L.circleMarker(latlng, {
+                      radius: 11,
+                      color: '#7f1d1d',
+                      weight: 3,
+                      opacity: 1,
+                      fillColor: '#dc2626',
+                      fillOpacity: 1,
+                    })
+                  }
+                />
               )}
 
             {/* =================================================
@@ -2673,34 +2184,18 @@ export default function MapContainer() {
           </LeafletMap>
 
           <div className={isFullscreen ? 'z-[2000]' : ''}>
-          <FloatingActionBar
-            onLocate={
-              focusOnCurrentLocation
-            }
-
-            onNavigate={
-              startRouting
-            }
-
-            onReset={
-              resetView
-            }
-
-            onGoogleMaps={
-              openGoogleMaps
-            }
-
-            onFullscreen={
-              toggleFullscreen
-            }
-
-            onLiveGps={
-              focusOnCurrentLocation
-            }
-          />
-
-          {isFullscreen && selectedLandmark ? (
-            <div className="pointer-events-auto absolute bottom-3 left-3 right-3 z-[2100] sm:left-4 sm:right-4">
+         <FloatingActionBar
+  onLocate={focusOnCurrentLocation}
+  onNavigate={startRouting}
+  onReset={resetView}
+  onGoogleMaps={openGoogleMaps}
+  onFullscreen={toggleFullscreen}
+  onLiveGps={focusOnCurrentLocation}
+  isFullscreen={isFullscreen}
+  showAllActions={showMapActions}
+/>
+         {isFullscreen && selectedLandmark ? (
+  <div className="pointer-events-auto absolute bottom-[76px] left-3 right-3 z-[2100]">
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/98 shadow-2xl backdrop-blur">
                 <div className="flex flex-col gap-3 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
@@ -2962,6 +2457,165 @@ export default function MapContainer() {
           </div>
         </div>
       </motion.div>
+
+      {/* =====================================================
+          CATEGORY PLACES LIST — ALWAYS BELOW THE MAP
+          The list is kept independently from the selected place.
+         ===================================================== */}
+
+      {selectedLandmark?.categoryPlaces &&
+        Array.isArray(selectedLandmark.categoryPlaces) &&
+        selectedLandmark.categoryPlaces.length > 0 && (
+          <section className="mt-4 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-lg">
+            <div className="border-b border-slate-200 px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-slate-900 sm:text-lg">
+                    {typeof selectedLandmark.name === 'string'
+                      ? selectedLandmark.name
+                      : selectedLandmark.category || 'Places'}
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+                    Select a place to highlight it on the map.
+                  </p>
+                </div>
+
+                <span className="shrink-0 rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">
+                  {selectedLandmark.categoryPlaces.length} places
+                </span>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {selectedLandmark.categoryPlaces.map((place, index) => {
+                const placeFeature = place?.feature
+                const currentKey =
+                  `${selectedLandmark.category}:${index}:${String(place?.name || '').toLowerCase()}:${String(
+                    placeFeature?.properties?.id ?? placeFeature?.properties?.ID ?? placeFeature?.properties?.stop_id ?? placeFeature?.properties?.stopId ?? placeFeature?.properties?.No ?? placeFeature?.properties?.no ?? ''
+                  )}`
+
+                const isSelected =
+                  selectedLandmark.fromCategory === true &&
+                  (selectedLandmark.selectedPlaceIndex === index || selectedLandmark.selectedPlaceKey === currentKey)
+
+                return (
+                  <button
+                    key={`map-category-place-${selectedLandmark.category}-${index}-${place?.name || 'place'}`}
+                    type="button"
+                    disabled={!placeFeature}
+                    onClick={() => {
+                      if (!placeFeature) return
+
+                      const properties = placeFeature.properties || {}
+                      const destination = getFeatureLatLng(placeFeature)
+                      const canonical = selectedLandmark.category
+
+                      setSelectedLandmark({
+                        id: `category-${canonical}-${index}-${String(place?.name || '').replace(/[^a-zA-Z0-9]+/g, '-')}`,
+                        name: place?.name || 'Selected Place',
+                        road: properties.road ?? properties.address ?? '',
+                        category: canonical,
+                        categoryId: canonical,
+                        sourceCategory: canonical === 'landmark'
+                          ? 'corporationLandmark'
+                          : canonical,
+                        latitude: destination?.lat ?? null,
+                        longitude: destination?.lng ?? null,
+                        description: place?.name || '',
+                        address: properties.address ?? properties.road ?? '',
+                        image: null,
+                        rating: properties.rating ?? 4.6,
+                        steps: [],
+                        landmarkNo:
+                          properties.landmarkNo ??
+                          properties.landmark_no ??
+                          (canonical === 'landmark' ? place?.number : ''),
+                        bldg_namee:
+                          properties.bldg_namee ??
+                          properties.bldg_name ??
+                          properties.building_name ??
+                          place?.name ??
+                          '',
+                        bldg_no:
+                          properties.bldg_no ??
+                          properties.building_no ??
+                          properties.buildingNo ??
+                          '',
+                        stopNo:
+                          properties.No ??
+                          properties.no ??
+                          properties.Number ??
+                          properties.number ??
+                          properties.stop_no ??
+                          properties.stopNo ??
+                          '',
+                        busStopNo:
+                          properties.No ??
+                          properties.no ??
+                          properties.Number ??
+                          properties.number ??
+                          properties.stop_no ??
+                          properties.stopNo ??
+                          '',
+                        feature: placeFeature,
+                        fromSearch: false,
+                        fromCategory: true,
+                        categoryPlaces: selectedLandmark.categoryPlaces,
+                        selectedPlaceIndex: index,
+                        selectedPlaceKey:
+                          `${canonical}:${index}:${String(place?.name || '').toLowerCase()}:${String(
+                            properties.id ?? properties.ID ?? properties.stop_id ?? properties.stopId ?? properties.No ?? properties.no ?? ''
+                          )}`,
+                      })
+
+                      clearRouting()
+                      mapRef.current?.closePopup()
+                    }}
+                    className={`flex w-full items-center gap-3 px-5 py-4 text-left transition ${
+                      !placeFeature
+                        ? 'cursor-not-allowed opacity-60'
+                        : isSelected
+                          ? 'bg-red-50'
+                          : 'hover:bg-teal-50'
+                    }`}
+                  >
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                        isSelected
+                          ? 'bg-red-600 text-white'
+                          : 'bg-teal-50 text-teal-700'
+                      }`}
+                    >
+                      {String.fromCharCode(97 + index)}.
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                      <span className="block whitespace-normal break-words text-sm font-semibold leading-5 text-slate-900">
+                        {place?.name || 'Unnamed place'}
+                      </span>
+
+                      {String(place?.number ?? '').trim() ? (
+                        <span className="mt-0.5 block text-xs text-slate-500">
+                          No: {place.number}
+                        </span>
+                      ) : null}
+
+                      {!placeFeature ? (
+                        <span className="mt-0.5 block text-xs font-medium text-amber-600">
+                          Location data unavailable
+                        </span>
+                      ) : null}
+                    </span>
+
+                    <span className="shrink-0 text-lg text-slate-400">
+                      ›
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )}
 
     </>
   )
