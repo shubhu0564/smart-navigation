@@ -113,215 +113,6 @@ const [showMapActions, setShowMapActions] = useState(false)
   const openSpacesInSite = useMemo(() => (geoJson.siteBoundary && geoJson.openSpaces) ? filterGeoJsonBySite(geoJson.openSpaces, geoJson.siteBoundary) : geoJson.openSpaces, [geoJson.openSpaces, geoJson.siteBoundary])
   /*
    * ==========================================================
-   * CORPORATION LANDMARKS
-   *
-   * 16 official landmarks for:
-   * GULMOHAR, JVPD SCHEME
-   * K/WEST WARD-67
-   *
-   * Their geometry comes from client_buildings.geojson.
-   * ==========================================================
-   */
-
-  const CORPORATION_LANDMARKS = [
-    'Kishore Kumar Bagh',
-    'Vijay Tendulkar Amphitheatre',
-    'Kaifi Azmi Park',
-    'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
-    'Vrajlal Parekh Vidyanidhi High School',
-    'Manoj Kumar Garden',
-    'Smt SB Aarya Vidya Mandir',
-    'Lokmanya Tilak Udyan',
-    'Ecole Mondiale World School',
-    'Gujarath Bhavan',
-    'Goa Bhavan',
-    'CDAC – Centre For Development of Advance Computing',
-    'Ivy League House (Girls Hostel)',
-    'Juhu Club Millennium',
-    'Shree Kalimata Temple',
-    'Manoranjan Park',
-  ]
-
-  const normalizeLandmarkName = (value) => {
-    return String(value ?? '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, ' ')
-      .trim()
-  }
-
-  const corporationLandmarks = useMemo(() => {
-    const source =
-      geoJson.clientBuildings || {
-        type: 'FeatureCollection',
-        features: [],
-      }
-
-    if (!Array.isArray(source.features)) {
-      return {
-        type: 'FeatureCollection',
-        features: [],
-      }
-    }
-
-    const aliases = {
-      'kishore kumar bagh': 1,
-
-      'vijay tendulkar amphitheatre': 2,
-      'vijay tendulkar amphitheater': 2,
-
-      'kaifi azmi park': 3,
-
-      'kamla raheja vidyanidhi institute for architecture environmental studies': 4,
-      'kamla raheja vidyanidhi': 4,
-      'krvia': 4,
-
-      'vrajlal parekh vidyanidhi high school': 5,
-      'vrajlal parekh': 5,
-
-      'manoj kumar garden': 6,
-
-      'smt sb aarya vidya mandir': 7,
-      'sb aarya vidya mandir': 7,
-      'aarya vidya mandir': 7,
-
-      'lokmanya tilak udyan': 8,
-      'tilak udyan': 8,
-
-      'ecole mondiale world school': 9,
-      'ecole mondiale': 9,
-
-      'gujarath bhavan': 10,
-      'gujarat bhavan': 10,
-
-      'goa bhavan': 11,
-
-      'cdac': 12,
-      'centre for development of advance computing': 12,
-      'centre for development of advanced computing': 12,
-
-      'ivy league house': 13,
-      'ivy league house girls hostel': 13,
-
-      'juhu club millennium': 14,
-      'juhu club': 14,
-
-      'shree kalimata temple': 15,
-      'kalimata temple': 15,
-
-      'manoranjan park': 16,
-    }
-
-    const features = []
-
-    source.features.forEach((feature) => {
-      const properties =
-        feature?.properties || {}
-
-      const rawName =
-        properties.bldg_namee ??
-        properties.bldg_name ??
-        properties.building_name ??
-        properties.name ??
-        properties.Name ??
-        ''
-
-      const normalized =
-        normalizeLandmarkName(rawName)
-
-      if (!normalized) {
-        return
-      }
-
-      let landmarkNumber =
-        aliases[normalized]
-
-      /*
-       * Partial matching for names containing
-       * extra text.
-       */
-      if (!landmarkNumber) {
-        const aliasEntry =
-          Object.entries(aliases).find(
-            ([alias]) =>
-              normalized.includes(alias) ||
-              alias.includes(normalized),
-          )
-
-        landmarkNumber =
-          aliasEntry?.[1]
-      }
-
-      if (!landmarkNumber) {
-        return
-      }
-
-      const officialName =
-        CORPORATION_LANDMARKS[
-          landmarkNumber - 1
-        ]
-
-      features.push({
-        ...feature,
-
-        properties: {
-          ...properties,
-
-          id:
-            `corporation-landmark-${landmarkNumber}`,
-
-          landmarkNo:
-            landmarkNumber,
-
-          landmarkName:
-            officialName,
-
-          name:
-            officialName,
-
-          category:
-            'corporationLandmark',
-
-          categoryLabel:
-            'Corporation Landmark',
-        },
-      })
-    })
-
-    /*
-     * Remove duplicate matches.
-     */
-    const unique =
-      Array.from(
-        new Map(
-          features.map((feature) => [
-            feature.properties.landmarkNo,
-            feature,
-          ]),
-        ).values(),
-      )
-
-    /*
-     * Keep only features inside the site.
-     */
-    const result = {
-      type: 'FeatureCollection',
-      features: unique,
-    }
-
-    if (geoJson.siteBoundary) {
-      return filterGeoJsonBySite(
-        result,
-        geoJson.siteBoundary,
-      )
-    }
-
-    return result
-  }, [
-    geoJson.clientBuildings,
-    geoJson.siteBoundary,
-  ])
-  /*
-   * ==========================================================
    * CLEAR ROUTING
    * ==========================================================
    */
@@ -942,17 +733,27 @@ const [showMapActions, setShowMapActions] = useState(false)
       properties.ID ??
       `building-${destination.lat}-${destination.lng}`
 
+    const isGISLandmark = ['yes', 'true', '1'].includes(
+      String(properties.Landmarks ?? properties.landmarks ?? '').trim().toLowerCase(),
+    )
+
+    const landmarkNo =
+      properties.landmarkNo ??
+      properties.landmark_no ??
+      ''
+
     setSelectedLandmark({
       id,
       name: buildingName,
       road: properties.road ?? properties.address ?? '',
-      category: 'Building',
-      sourceCategory: 'building',
+      category: isGISLandmark ? 'Corporation Landmark' : 'Building',
+      sourceCategory: isGISLandmark ? 'corporationLandmark' : 'building',
       latitude: destination.lat,
       longitude: destination.lng,
       description: buildingName,
       bldg_namee: buildingName,
       bldg_no: buildingNo,
+      landmarkNo,
       address: properties.address ?? properties.road ?? '',
       image: null,
       rating: properties.rating ?? 4.6,
@@ -1537,27 +1338,50 @@ const [showMapActions, setShowMapActions] = useState(false)
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      const active =
-        document.fullscreenElement ===
-        mapWrapperRef.current
+  const active =
+    document.fullscreenElement ===
+    mapWrapperRef.current
 
-      setIsFullscreen(active)
+  setIsFullscreen(active)
 
-      // Wait for the browser to apply the new fullscreen
-      // dimensions before asking Leaflet to recalculate.
-      resizeLeafletMap()
+  resizeLeafletMap()
 
-      if (active && mapRef.current) {
-        setTimeout(() => {
-          try {
-            mapRef.current.invalidateSize({
-              pan: false,
-              debounceMoveend: true,
+  if (active && mapRef.current) {
+    setTimeout(() => {
+      try {
+        const map = mapRef.current
+
+        // First refresh Leaflet's fullscreen dimensions
+        map.invalidateSize({
+          pan: false,
+          debounceMoveend: true,
+        })
+
+        // Then fit the map to the actual site boundary
+        if (geoJson.siteBoundary) {
+          const boundaryLayer =
+            L.geoJSON(geoJson.siteBoundary)
+
+          const bounds =
+            boundaryLayer.getBounds()
+
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, {
+              padding: [60, 60],
+              maxZoom: 17,
+              animate: true,
             })
-          } catch {}
-        }, 250)
+          }
+        }
+      } catch (error) {
+        console.warn(
+          'Unable to fit fullscreen map:',
+          error
+        )
       }
-    }
+    }, 300)
+  }
+}
 
     document.addEventListener(
       'fullscreenchange',
@@ -1580,7 +1404,7 @@ const [showMapActions, setShowMapActions] = useState(false)
         resizeLeafletMap,
       )
     }
-  }, [])
+  }, [geoJson.siteBoundary])
 
   /*
    * ==========================================================
@@ -1796,37 +1620,27 @@ const [showMapActions, setShowMapActions] = useState(false)
             }
           `}</style>
 
-          <LeafletMap
-            ref={mapRef}
-            center={[
-              center.lat,
-              center.lng,
-            ]}
-            zoom={INITIAL_MAP_ZOOM}
-            scrollWheelZoom={
-              isTouchDevice ? mapInteractionActive : true
-            }
-            dragging={
-              isTouchDevice ? mapInteractionActive : true
-            }
-            touchZoom={
-              isTouchDevice ? mapInteractionActive : true
-            }
-            doubleClickZoom={
-              isTouchDevice ? mapInteractionActive : true
-            }
-            zoomControl={true}
-            className="gis-map-black-white h-full w-full"
-            eventHandlers={{
-              click: () => {
-                if (isTouchDevice) {
-                  setMapInteractionActive(true)
-                }
-              },
-            }}
-         whenCreated={(map) => {
-  mapRef.current = map
-
+         <LeafletMap
+  ref={mapRef}
+  center={[
+    center.lat,
+    center.lng,
+  ]}
+  zoom={INITIAL_MAP_ZOOM}
+  scrollWheelZoom={true}
+  dragging={true}
+  touchZoom={true}
+  doubleClickZoom={true}
+  zoomControl={false}
+  className="gis-map-black-white h-full w-full"
+  eventHandlers={{
+    click: () => {
+      if (isTouchDevice) {
+        setMapInteractionActive(true)
+      }
+    },
+  }}
+  whenCreated={(map) => {
   // Initial page:
   // only the right-side fullscreen icon is visible.
   setShowMapActions(false)
@@ -1840,6 +1654,11 @@ const [showMapActions, setShowMapActions] = useState(false)
   }
 
   map.on('zoomend', handleZoom)
+  handleZoom()
+
+  return () => {
+    map.off('zoomend', handleZoom)
+  }
 }}
           >
 
@@ -1900,139 +1719,29 @@ const [showMapActions, setShowMapActions] = useState(false)
   />
 )}
 
-{/* BUS STOPS */}
-{/* your existing code — DON'T CHANGE */}            {/* =================================================
-                CORPORATION LANDMARKS
+{/* =================================================
+    CORPORATION LANDMARKS
+    Client-approved landmarks
+   ================================================= */}
 
-                Client-approved landmarks
-               ================================================= */}
+{/* =================================================
+    ROADS
+    Uses the actual public/data/roads.geojson layer.
+    Keep this layer above the site boundary/building base
+    so the road network is visible.
+   ================================================= */}
 
-            {corporationLandmarks?.features?.length > 0 && (
-              <GeoJsonLayer
-                featureData={corporationLandmarks}
-                layerKey="landmarks"
-                showLabels={
-                  selectedCategory === 'landmark' ||
-                  selectedCategory === 'landmarks'
-                }
-                onFeatureClick={(feature) => {
-                  clearRouting()
+{geoJson.roads && (
+  <GeoJsonLayer
+    featureData={geoJson.roads}
+    layerKey="roads"
+    showLabels={false}
+  />
+)}
 
-                                    mapRef.current?.closePopup()
-
-                  const properties =
-                    feature?.properties || {}
-
-                  const destination =
-                    getFeatureLatLng(feature)
-
-                  if (!destination) {
-                    setToast({
-                      en: 'Unable to determine landmark location.',
-                      mr: 'लँडमार्कचे स्थान निश्चित करता आले नाही.',
-                    })
-
-                    return
-                  }
-
-                  const landmarkName =
-                    properties.landmarkName ??
-                    properties.name ??
-                    'Corporation Landmark'
-
-                  const landmarkNo =
-                    properties.landmarkNo ??
-                    '—'
-
-                  const selected = {
-                    id:
-                      properties.id ??
-                      `landmark-${landmarkNo}`,
-
-                    name:
-                      landmarkName,
-
-                    road:
-                      properties.road ??
-                      properties.address ??
-                      '',
-
-                    category:
-                      'Corporation Landmark',
-
-                    sourceCategory:
-                      'corporationLandmark',
-
-                    landmarkNo,
-
-                    latitude:
-                      destination.lat,
-
-                    longitude:
-                      destination.lng,
-
-                    description:
-                      landmarkName,
-
-                    address:
-                      properties.address ??
-                      properties.road ??
-                      '',
-
-                    image: null,
-
-                    rating: 4.6,
-
-                    steps: [],
-
-                    feature,
-                  }
-
-                  setSelectedLandmark(
-                    selected,
-                  )
-
-                  /*
-                   * Zoom to landmark.
-                   */
-                  mapRef.current?.flyTo(
-                    [
-                      destination.lat,
-                      destination.lng,
-                    ],
-                    18,
-                    {
-                      duration: 0.8,
-                    },
-                  )
-
-                  setToast({
-                    en: `${landmarkName} selected`,
-                    mr: `${landmarkName} निवडले`,
-                  })
-                }}
-              />
-            )}
-
-            {/* =================================================
-                IMPORTANT
-
-                OLD BUILDINGS DISABLED
-                ROADS DISABLED
-                SITE BOUNDARY DISABLED
-
-                This removes the unwanted diagonal lines.
-               ================================================= */}
-
-            {/* geoJson.buildings DISABLED */}
-
-            {/* geoJson.roads DISABLED */}
-
-            {/* geoJson.siteBoundary DISABLED */}
-
-            {/* =================================================
-                BUS STOPS
-               ================================================= */}
+{/* =================================================
+    BUS STOPS
+   ================================================= */}
 
             {(selectedCategory === 'all' || selectedCategory === 'busStop' || enabledCategories.includes('busStop')) &&
               busStopsInSite && (
@@ -2183,6 +1892,74 @@ const [showMapActions, setShowMapActions] = useState(false)
 
           </LeafletMap>
 
+          {/* =================================================
+              GIS LEGEND
+              Shows ONLY in fullscreen mode.
+              Current available GIS layers:
+              Site Boundary, Buildings, Roads, Open Space.
+             ================================================= */}
+       {isFullscreen && (
+  <div
+    className="
+      pointer-events-none
+      absolute
+      top-4
+      right-4
+      z-[2300]
+      w-[190px]
+      rounded-xl
+      border
+      border-slate-200
+      bg-white/95
+      p-4
+      shadow-xl
+      backdrop-blur-sm
+    "
+  >
+              <h3 className="mb-3 text-sm font-bold text-slate-900">
+                JVPD GIS LAYERS
+              </h3>
+
+              <div className="space-y-3 text-xs text-slate-700">
+
+                {/* SITE BOUNDARY */}
+                <div className="flex items-center gap-3">
+                  <span
+                    className="block w-7"
+                    style={{
+                      borderTop: '3px dashed #dc2626',
+                    }}
+                  />
+                  <span>Site Boundary</span>
+                </div>
+
+                {/* BUILDINGS */}
+                <div className="flex items-center gap-3">
+                  <span className="block h-4 w-7 rounded-sm border border-slate-500 bg-white" />
+                  <span>Buildings</span>
+                </div>
+
+                {/* ROADS */}
+                <div className="flex items-center gap-3">
+                  <span
+                    className="block w-7"
+                    style={{
+                      borderTop: '3px solid #6b7280',
+                    }}
+                  />
+                  <span>Roads</span>
+                </div>
+
+                {/* OPEN SPACE */}
+                <div className="flex items-center gap-3">
+                  <span className="block h-4 w-7 rounded-sm border border-green-600 bg-green-100" />
+                  <span>Open Space</span>
+                </div>
+
+              </div>
+            </div>
+          )}
+
           <div className={isFullscreen ? 'z-[2000]' : ''}>
          <FloatingActionBar
   onLocate={focusOnCurrentLocation}
@@ -2195,7 +1972,7 @@ const [showMapActions, setShowMapActions] = useState(false)
   showAllActions={showMapActions}
 />
          {isFullscreen && selectedLandmark ? (
-  <div className="pointer-events-auto absolute bottom-[76px] left-3 right-3 z-[2100]">
+  <div className="pointer-events-auto absolute bottom-[145px] left-3 right-3 z-[2200]">
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/98 shadow-2xl backdrop-blur">
                 <div className="flex flex-col gap-3 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
