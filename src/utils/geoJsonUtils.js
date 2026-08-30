@@ -219,82 +219,258 @@ function haversineDistanceKm(a, b) {
 
 export function normalizeLandmarkFeature(feature, referencePoint = DEFAULT_CENTER) {
   if (!feature || feature.type !== 'Feature' || !feature.geometry) return null
+
   const { properties = {} } = feature
-  // Extract the first numeric coordinate pair from the geometry safely.
+
+  // The latest client GIS is the source of truth for landmark geometry.
+  // A feature is a GIS landmark only when Landmarks is yes/true/1.
+  const isGISLandmark = ['yes', 'true', '1'].includes(
+    String(properties.Landmarks ?? properties.landmarks ?? '')
+      .trim()
+      .toLowerCase(),
+  )
+
+  if (!isGISLandmark) return null
+
   const extractFirstPair = (coords) => {
-    if (!coords) return null
-    if (typeof coords[0] === 'number' && typeof coords[1] === 'number') return coords
+    if (!Array.isArray(coords)) return null
+    if (
+      typeof coords[0] === 'number' &&
+      typeof coords[1] === 'number'
+    ) {
+      return coords
+    }
+
     for (const c of coords) {
       const found = extractFirstPair(c)
       if (found) return found
     }
+
     return null
   }
 
-  const first = extractFirstPair(feature.geometry.coordinates) || [referencePoint.lng, referencePoint.lat]
-  const [lng, lat] = first
-  // Prefer a derivedCategory (created from client buildings) if present
-  const categoryId = getLandmarkCategoryId(properties.derivedCategory ?? properties.category)
+  const first =
+    extractFirstPair(feature.geometry.coordinates) ||
+    [referencePoint.lng, referencePoint.lat]
 
-  const distanceKm = haversineDistanceKm({ lat, lng }, referencePoint)
-  const walkDistanceKm = Math.max(0.3, Number((distanceKm * 1.3).toFixed(1)))
-  const walkTimeMin = Math.max(4, Math.round((walkDistanceKm / 5) * 60))
+  const [lng, lat] = first
+
+  const categoryId = 'landmark'
+
+  const distanceKm = haversineDistanceKm(
+    { lat, lng },
+    referencePoint,
+  )
+
+  const walkDistanceKm = Math.max(
+    0.3,
+    Number((distanceKm * 1.3).toFixed(1)),
+  )
+
+  const walkTimeMin = Math.max(
+    4,
+    Math.round((walkDistanceKm / 5) * 60),
+  )
+
+  const gisName =
+    properties.bldg_namee ??
+    properties.bldg_name ??
+    properties.building_name ??
+    properties.landmarkName ??
+    properties.name ??
+    properties.Name ??
+    'Unknown place'
+
+  const gisNumber =
+    properties.bldg_no ??
+    properties.building_no ??
+    properties.landmarkNo ??
+    properties.landmark_no ??
+    ''
 
   return {
-    id: properties.id ?? `${lat}-${lng}`,
-    number: String(properties.id ?? '').padStart(2, '0'),
-    name: properties.name ?? 'Unknown place',
-    road: properties.road ?? properties.address ?? '',
+    // Stable ID comes from the GIS feature when available.
+    id:
+      properties.fid_1 ??
+      properties.id ??
+      `gis-landmark-${lat}-${lng}`,
+
+    // Do not invent a landmark number from the old 1–16 list.
+    number: gisNumber === '' ? '' : String(gisNumber),
+
+    // Name comes directly from the new client GIS.
+    name: String(gisName).trim(),
+
+    road:
+      properties.road ??
+      properties.address ??
+      '',
+
     category: categoryId,
     categoryLabel: getLandmarkCategoryLabel(categoryId),
-    // preserve original source feature (polygon) when available so UI can use authoritative geometry
-    feature: properties.sourceFeature ?? feature,
-    sourceCategory: properties.category ?? 'Unknown',
+
+    // MOST IMPORTANT:
+    // Preserve the exact original polygon/multipolygon.
+    feature,
+
+    sourceCategory: 'clientBuildings',
+    isGISLandmark: true,
+
     latitude: lat,
     longitude: lng,
     lat,
     lng,
-    description: properties.description ?? properties.name ?? '',
+
+    description:
+      properties.description ??
+      String(gisName).trim(),
+
     image: properties.image ?? null,
     icon: properties.icon ?? 'MapPin',
+
     distanceKm,
     walkDistanceKm,
     walkTimeMin,
-    address: properties.address ?? properties.road ?? '',
+
+    address:
+      properties.address ??
+      properties.road ??
+      '',
+
     rating: properties.rating ?? 4.6,
-    tags: properties.tags ?? [properties.category ?? 'Point of interest'],
+
+    tags:
+      properties.tags ??
+      ['Landmark'],
+
     steps:
       properties.steps ?? [
-        { en: 'Head toward the destination as shown on the map.', mr: 'नकाशावर दाखवल्याप्रमाणे गंतव्याकडे चला.' },
-        { en: 'Follow the nearest accessible path to reach the location.', mr: 'स्थानावर पोहोचण्यासाठी जवळच्या प्रवेशयोग्य मार्गाचे अनुसरण करा.' },
+        {
+          en: 'Head toward the destination as shown on the map.',
+          mr: 'नकाशावर दाखवल्याप्रमाणे गंतव्याकडे चला.',
+        },
+        {
+          en: 'Follow the nearest accessible path to reach the location.',
+          mr: 'स्थानावर पोहोचण्यासाठी जवळच्या प्रवेशयोग्य मार्गाचे अनुसरण करा.',
+        },
       ],
   }
 }
 
-export function normalizeLandmarks(geoJson, referencePoint = DEFAULT_CENTER) {
-  if (!geoJson || !Array.isArray(geoJson.features)) return []
+export function normalizeLandmarks(
+  geoJson,
+  referencePoint = DEFAULT_CENTER,
+) {
+  if (!geoJson || !Array.isArray(geoJson.features)) {
+    return []
+  }
+
   return geoJson.features
-    .map((feature) => normalizeLandmarkFeature(feature, referencePoint))
+    .filter((feature) => {
+      const value =
+        feature?.properties?.Landmarks ??
+        feature?.properties?.landmarks ??
+        ''
+
+      return ['yes', 'true', '1'].includes(
+        String(value).trim().toLowerCase(),
+      )
+    })
+    .map((feature) =>
+      normalizeLandmarkFeature(
+        feature,
+        referencePoint,
+      ),
+    )
     .filter(Boolean)
 }
 
-export function filterLandmarksGeoJson(geoJson, selectedCategory, searchQuery, enabledCategories) {
-  if (!geoJson || !Array.isArray(geoJson.features)) return null
-  const query = String(searchQuery || '').trim().toLowerCase()
+export function filterLandmarksGeoJson(
+  geoJson,
+  selectedCategory,
+  searchQuery,
+  enabledCategories = [],
+) {
+  if (!geoJson || !Array.isArray(geoJson.features)) {
+    return null
+  }
+
+  const query = String(searchQuery || '')
+    .trim()
+    .toLowerCase()
+
   const features = geoJson.features.filter((feature) => {
-    const category = getLandmarkCategoryId(feature?.properties?.derivedCategory || feature?.properties?.category)
-    const name = feature?.properties?.name ?? ''
-    const road = feature?.properties?.road ?? ''
+    const props = feature?.properties ?? {}
 
-    const categoryMatch = selectedCategory === 'all' || category === selectedCategory
-    const enabledMatch = enabledCategories.length === 0 || enabledCategories.includes(category) || category === 'landmark'
+    // For client buildings, only features explicitly marked as
+    // Landmarks=yes/true/1 are allowed into the landmark layer.
+    const isGISLandmark = ['yes', 'true', '1'].includes(
+      String(
+        props.Landmarks ??
+        props.landmarks ??
+        '',
+      )
+        .trim()
+        .toLowerCase(),
+    )
+
+    if (!isGISLandmark) return false
+
+    const category = 'landmark'
+
+    const name =
+      props.bldg_namee ??
+      props.bldg_name ??
+      props.building_name ??
+      props.landmarkName ??
+      props.name ??
+      props.Name ??
+      ''
+
+    const road =
+      props.road ??
+      props.address ??
+      ''
+
+    const searchValues = [
+      name,
+      road,
+      category,
+      props.bldg_no,
+      props.landmarkNo,
+      props.id,
+      props.fid_1,
+    ]
+
+    const categoryMatch =
+      selectedCategory === 'all' ||
+      selectedCategory === 'landmark' ||
+      selectedCategory === 'landmarks' ||
+      category === selectedCategory
+
+    const enabledMatch =
+      enabledCategories.length === 0 ||
+      enabledCategories.includes('landmark')
+
     const searchMatch =
-      !query || [name, road, category, String(feature?.properties?.id ?? '')].some((value) => value.toLowerCase().includes(query))
+      !query ||
+      searchValues.some((value) =>
+        String(value ?? '')
+          .toLowerCase()
+          .includes(query),
+      )
 
-    return categoryMatch && enabledMatch && searchMatch
+    return (
+      categoryMatch &&
+      enabledMatch &&
+      searchMatch
+    )
   })
 
-  return { ...geoJson, features }
+  return {
+    ...geoJson,
+    features,
+  }
 }
 
 // =====================
@@ -418,10 +594,17 @@ export function deriveFeatureCategory(feature, source = 'clientBuildings') {
   if (source === 'busStops') return 'busStop'
   if (source === 'parkPlayground' || source === 'openSpaces') return 'park'
 
-  // Check explicit Landmarks property first
-  const landmarks = String(props.Landmarks ?? props.landmarks ?? props.category ?? '').trim()
-  if (landmarks) {
-    const key = landmarks.toLowerCase()
+  // The latest client GIS explicitly marks landmark features with
+  // Landmarks = yes/true/1. This is the authoritative landmark flag.
+  const landmarks = String(props.Landmarks ?? props.landmarks ?? '').trim()
+  if (['yes', 'true', '1'].includes(landmarks.toLowerCase())) {
+    return 'landmark'
+  }
+
+  // Keep support for older datasets that stored a descriptive category.
+  const explicitCategory = String(props.category ?? '').trim()
+  if (explicitCategory) {
+    const key = explicitCategory.toLowerCase()
     if (key.includes('school') || key.includes('vidya') || key.includes('institute') || key.includes('college') || key.includes('vidyanidhi')) return 'education'
     if (key.includes('bus')) return 'busStop'
     if (key.includes('park') || key.includes('play')) return 'park'
@@ -446,32 +629,107 @@ export function deriveFeatureCategory(feature, source = 'clientBuildings') {
 // Each derived landmark is a Point placed at the building's centroid but keeps the
 // original building feature as `sourceFeature` in properties so clicks can use
 // the true geometry (polygon) as the source of truth.
-export function extractLandmarksFromClientBuildings(clientBuildingsGeoJson) {
-  if (!clientBuildingsGeoJson || !Array.isArray(clientBuildingsGeoJson.features)) return { type: 'FeatureCollection', features: [] }
-
-  const features = []
-
-  for (const f of clientBuildingsGeoJson.features) {
-    try {
-      const category = deriveFeatureCategory(f, 'clientBuildings')
-      const centroid = f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') ? centroidOfPolygon(f.geometry.coordinates) : null
-      if (!centroid || !Array.isArray(centroid) || centroid.length < 2) continue
-      const [lng, lat] = centroid
-      const props = Object.assign({}, f.properties || {})
-      props.source = 'clientBuildings'
-      props.derivedCategory = category
-      // Keep a reference to the original feature for click/routing
-      props.sourceFeature = f
-
-      features.push({
-        type: 'Feature',
-        properties: props,
-        geometry: { type: 'Point', coordinates: [lng, lat] },
-      })
-    } catch (e) {
-      // skip invalid feature
+export function extractLandmarksFromClientBuildings(
+  clientBuildingsGeoJson,
+) {
+  if (
+    !clientBuildingsGeoJson ||
+    !Array.isArray(clientBuildingsGeoJson.features)
+  ) {
+    return {
+      type: 'FeatureCollection',
+      features: [],
     }
   }
 
-  return { type: 'FeatureCollection', features }
+  const features = []
+
+  for (const sourceFeature of clientBuildingsGeoJson.features) {
+    try {
+      const props = sourceFeature?.properties ?? {}
+
+      // ONLY the client's explicit GIS landmark flag controls
+      // whether this feature becomes a landmark.
+      const isGISLandmark = ['yes', 'true', '1'].includes(
+        String(
+          props.Landmarks ??
+          props.landmarks ??
+          '',
+        )
+          .trim()
+          .toLowerCase(),
+      )
+
+      if (!isGISLandmark) continue
+
+      const geometry = sourceFeature.geometry
+
+      if (!geometry || !geometry.coordinates) {
+        continue
+      }
+
+      const centroid =
+        geometry.type === 'Polygon' ||
+        geometry.type === 'MultiPolygon'
+          ? centroidOfPolygon(
+              geometry.coordinates,
+            )
+          : null
+
+      if (
+        !centroid ||
+        !Array.isArray(centroid) ||
+        centroid.length < 2
+      ) {
+        continue
+      }
+
+      const [lng, lat] = centroid
+
+      const name =
+        props.bldg_namee ??
+        props.bldg_name ??
+        props.building_name ??
+        props.landmarkName ??
+        props.name ??
+        props.Name ??
+        'Unknown place'
+
+      const derivedProps = {
+        ...props,
+
+        source: 'clientBuildings',
+        derivedCategory: 'landmark',
+        isGISLandmark: true,
+
+        // Display name comes directly from the new GIS.
+        name: String(name).trim(),
+
+        // Preserve the exact original polygon.
+        sourceFeature,
+      }
+
+      features.push({
+        type: 'Feature',
+        properties: derivedProps,
+
+        // This point is only for the marker/list.
+        // sourceFeature above remains the authoritative geometry.
+        geometry: {
+          type: 'Point',
+          coordinates: [lng, lat],
+        },
+      })
+    } catch (error) {
+      console.warn(
+        '[geoJsonUtils] Skipping invalid GIS landmark:',
+        error,
+      )
+    }
+  }
+
+  return {
+    type: 'FeatureCollection',
+    features,
+  }
 }

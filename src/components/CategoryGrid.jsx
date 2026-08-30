@@ -674,46 +674,197 @@ export default function CategoryGrid({
     })
   }
 
-  const findFeatureForName = (category, name, number = null) => {
-    const aliases = aliasesFor(name)
-    const collections = getFeatureCollectionsForCategory(category)
+const findFeatureForName = (category, name, number = null) => {
+  const canonical = canonicalCategoryId(category)
+  const aliases = aliasesFor(name)
+  const collections = getFeatureCollectionsForCategory(canonical)
 
-    // Pass 1: exact/strong name match across the category's GIS layers.
-    for (const collection of collections) {
-      const match = collection.features.find((feature) =>
-        featureMatchesName(feature, aliases),
+  /*
+   * ============================================================
+   * LANDMARK FIX
+   * ============================================================
+   *
+   * IMPORTANT:
+   * The new client GIS stores landmark features with:
+   *
+   *   Landmarks: "yes"
+   *   bldg_no: 0
+   *
+   * Therefore NEVER use bldg_no / landmark number to find
+   * a landmark.
+   *
+   * The landmark must be matched using its actual GIS name.
+   */
+
+  if (canonical === 'landmark') {
+    const clientBuildings = geoJson?.clientBuildings
+
+    if (!clientBuildings?.features?.length) {
+      console.warn(
+        '[CategoryGrid] clientBuildings GIS is missing for landmark:',
+        name,
       )
-      if (match) return match
+
+      return null
     }
 
-    // Pass 2: exact GIS number fallback. Only use the category's
-    // authoritative layer(s), otherwise a bus-stop number could
-    // accidentally match an unrelated building number.
-    if (number !== null && number !== undefined) {
-      const targetNumber = String(number).trim()
+    const landmarkFeatures =
+      clientBuildings.features.filter((feature) => {
+        const properties = feature?.properties || {}
 
-      if (targetNumber) {
-        let numberCollections = collections
+        return (
+          String(properties.Landmarks || '')
+            .trim()
+            .toLowerCase() === 'yes'
+        )
+      })
 
-        if (canonicalCategoryId(category) === 'busStop') {
-          numberCollections = collections.slice(0, 1)
-        } else if (canonicalCategoryId(category) === 'park') {
-          numberCollections = collections.slice(0, 2)
-        }
+    /*
+     * First try an exact/alias name match.
+     */
+    const exactLandmark = landmarkFeatures.find((feature) => {
+      const currentName = normalise(
+        feature?.properties?.bldg_namee ??
+          feature?.properties?.bldg_name ??
+          feature?.properties?.building_name ??
+          '',
+      )
 
-        for (const collection of numberCollections) {
-          const match = collection.features.find((feature) => {
-            const currentNumber = String(featureNumber(feature)).trim()
-            return currentNumber === targetNumber
-          })
-          if (match) return match
-        }
-      }
+      if (!currentName) return false
+
+      return aliases.some(
+        (alias) => currentName === alias,
+      )
+    })
+
+    if (exactLandmark) {
+      return exactLandmark
     }
+
+    /*
+     * Second try the controlled alias matching.
+     */
+    const aliasLandmark = landmarkFeatures.find((feature) => {
+      const currentName = normalise(
+        feature?.properties?.bldg_namee ??
+          feature?.properties?.bldg_name ??
+          feature?.properties?.building_name ??
+          '',
+      )
+
+      if (!currentName) return false
+
+      return aliases.some((alias) => {
+        if (!alias) return false
+
+        const currentWords = currentName.split(' ')
+        const aliasWords = alias.split(' ')
+
+        const currentSet = new Set(currentWords)
+
+        const commonWords = aliasWords.filter(
+          (word) => currentSet.has(word),
+        )
+
+        return (
+          commonWords.length >=
+          Math.min(2, aliasWords.length)
+        )
+      })
+    })
+
+    if (aliasLandmark) {
+      return aliasLandmark
+    }
+
+    /*
+     * VERY IMPORTANT:
+     *
+     * Do NOT fall back to bldg_no for landmarks.
+     *
+     * If the new GIS does not contain this landmark,
+     * return null instead of selecting a wrong building.
+     */
+
+    console.warn(
+      '[CategoryGrid] Landmark not found in NEW GIS:',
+      {
+        requestedName: name,
+        aliases,
+        availableLandmarks:
+          landmarkFeatures.map(
+            (feature) =>
+              feature?.properties?.bldg_namee,
+          ),
+      },
+    )
 
     return null
   }
 
+  /*
+   * ============================================================
+   * OTHER CATEGORIES
+   * ============================================================
+   */
+
+  /*
+   * First: exact/strong name matching.
+   */
+  for (const collection of collections) {
+    const match = collection.features.find(
+      (feature) =>
+        featureMatchesName(feature, aliases),
+    )
+
+    if (match) {
+      return match
+    }
+  }
+
+  /*
+   * Number fallback is allowed ONLY for categories where
+   * the number belongs to that category's GIS layer.
+   */
+  if (
+    number !== null &&
+    number !== undefined
+  ) {
+    const targetNumber = String(number).trim()
+
+    if (targetNumber) {
+      let numberCollections = collections
+
+      if (
+        canonical === 'busStop'
+      ) {
+        numberCollections = collections.slice(0, 1)
+      } else if (
+        canonical === 'park'
+      ) {
+        numberCollections = collections.slice(0, 2)
+      }
+
+      for (const collection of numberCollections) {
+        const match = collection.features.find(
+          (feature) => {
+            const currentNumber = String(
+              featureNumber(feature),
+            ).trim()
+
+            return currentNumber === targetNumber
+          },
+        )
+
+        if (match) {
+          return match
+        }
+      }
+    }
+  }
+
+  return null
+}
   const findBuildingFeatureForName = (name, number = null) =>
     findFeatureForName('landmark', name, number)
 
@@ -726,30 +877,118 @@ export default function CategoryGrid({
    * ==========================================================
    */
 
-  const getPlacesForCategory = (categoryId) => {
-    const canonical = canonicalCategoryId(categoryId)
-    const definitions = PLACE_DEFINITIONS[canonical] || []
+ const getPlacesForCategory = (categoryId) => {
+  const canonical = canonicalCategoryId(categoryId)
 
-    return definitions.map((place, index) => {
+  // ============================================================
+  // LANDMARKS
+  // ============================================================
+  // The NEW client GIS is the source of truth.
+  // Only features explicitly marked Landmarks = yes/true/1
+  // are shown as landmarks.
+  // ============================================================
+
+  if (canonical === 'landmark') {
+    const features =
+      geoJson?.clientBuildings?.features ?? []
+
+    const landmarkFeatures = features.filter((feature) => {
+      const properties = feature?.properties ?? {}
+
+      return ['yes', 'true', '1'].includes(
+        String(
+          properties.Landmarks ??
+            properties.landmarks ??
+            '',
+        )
+          .trim()
+          .toLowerCase(),
+      )
+    })
+
+    return landmarkFeatures.map((feature, index) => {
+      const properties = feature?.properties ?? {}
+
+      const name =
+        properties.bldg_namee ??
+        properties.bldg_name ??
+        properties.building_name ??
+        properties.name ??
+        properties.Name ??
+        `Landmark ${index + 1}`
+
+      const number =
+        properties.landmarkNo ??
+        properties.landmark_no ??
+        ''
+
+      return {
+        id:
+          properties.fid_1 ??
+          properties.fid ??
+          properties.id ??
+          `gis-landmark-${index}`,
+
+        name,
+
+        number:
+          number !== ''
+            ? String(number)
+            : String(index + 1),
+
+        feature,
+
+        index,
+
+        sourceCategory: 'landmark',
+
+        road:
+          properties.road ??
+          properties.address ??
+          '',
+
+        category: 'landmark',
+      }
+    })
+  }
+
+  // ============================================================
+  // ALL OTHER CATEGORIES
+  // ============================================================
+
+  const definitions =
+    PLACE_DEFINITIONS[canonical] || []
+
+  return definitions
+    .map((place, index) => {
       const feature = findFeatureForName(
         canonical,
         place.name,
         place.number,
       )
 
-      const actualNumber = feature
-        ? featureNumber(feature)
-        : place.number
+      if (!feature) {
+        return null
+      }
+
+      const actualNumber =
+        featureNumber(feature)
 
       return {
         ...place,
-        number: actualNumber || place.number,
+
+        number:
+          actualNumber || place.number,
+
         feature,
+
         index,
+
         sourceCategory: canonical,
       }
     })
-  }
+    .filter(Boolean)
+}
 
   /*
    * ==========================================================
