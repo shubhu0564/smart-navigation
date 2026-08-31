@@ -111,7 +111,40 @@ const [showMapActions, setShowMapActions] = useState(false)
   const parkPlaygroundInSite = useMemo(() => (geoJson.siteBoundary && geoJson.parkPlayground) ? filterGeoJsonBySite(geoJson.parkPlayground, geoJson.siteBoundary) : geoJson.parkPlayground, [geoJson.parkPlayground, geoJson.siteBoundary])
 
   const openSpacesInSite = useMemo(() => (geoJson.siteBoundary && geoJson.openSpaces) ? filterGeoJsonBySite(geoJson.openSpaces, geoJson.siteBoundary) : geoJson.openSpaces, [geoJson.openSpaces, geoJson.siteBoundary])
-  /*
+ // ============================================================
+// PARK / GRD OPEN SPACES
+// Only features where "Park & Gr" = "yes" are treated as green
+// ============================================================
+
+const parkAndGroundsInSite = useMemo(() => {
+  if (!openSpacesInSite) {
+    return null
+  }
+
+  if (
+    openSpacesInSite.type !== 'FeatureCollection' ||
+    !Array.isArray(openSpacesInSite.features)
+  ) {
+    return null
+  }
+
+  const greenFeatures =
+    openSpacesInSite.features.filter((feature) => {
+      const value =
+        feature?.properties?.['Park & Gr']
+
+      return (
+        String(value ?? '')
+          .trim()
+          .toLowerCase() === 'yes'
+      )
+    })
+
+  return {
+    type: 'FeatureCollection',
+    features: greenFeatures,
+  }
+}, [openSpacesInSite]) /*
    * ==========================================================
    * CLEAR ROUTING
    * ==========================================================
@@ -314,8 +347,8 @@ const [showMapActions, setShowMapActions] = useState(false)
     if (sourceCategory === 'park' || sourceCategory === 'corporationLandmark') {
       color = '#16a34a'
     } else if (sourceCategory === 'busStop') {
-      color = '#0284c7'
-    } else if (sourceCategory === 'educationalInstitute') {
+  color = '#dc2626'
+}else if (sourceCategory === 'educationalInstitute') {
       color = '#7c3aed'
     } else if (sourceCategory === 'communityCenter') {
       color = '#ea580c'
@@ -1404,7 +1437,7 @@ const [showMapActions, setShowMapActions] = useState(false)
         resizeLeafletMap,
       )
     }
-  }, [geoJson.siteBoundary])
+  }, [])
 
   /*
    * ==========================================================
@@ -1631,7 +1664,7 @@ const [showMapActions, setShowMapActions] = useState(false)
   dragging={true}
   touchZoom={true}
   doubleClickZoom={true}
-  zoomControl={false}
+  zoomControl={true}
   className="gis-map-black-white h-full w-full"
   eventHandlers={{
     click: () => {
@@ -1654,11 +1687,6 @@ const [showMapActions, setShowMapActions] = useState(false)
   }
 
   map.on('zoomend', handleZoom)
-  handleZoom()
-
-  return () => {
-    map.off('zoomend', handleZoom)
-  }
 }}
           >
 
@@ -1738,7 +1766,17 @@ const [showMapActions, setShowMapActions] = useState(false)
     showLabels={false}
   />
 )}
+{/* =================================================
+    RIVER / NALLAH
+   ================================================= */}
 
+{geoJson.riverNallah && (
+  <GeoJsonLayer
+    featureData={geoJson.riverNallah}
+    layerKey="riverNallah"
+    showLabels={true}
+  />
+)}
 {/* =================================================
     BUS STOPS
    ================================================= */}
@@ -1899,23 +1937,20 @@ const [showMapActions, setShowMapActions] = useState(false)
               Site Boundary, Buildings, Roads, Open Space.
              ================================================= */}
        {isFullscreen && (
-  <div
-    className="
-      pointer-events-none
-      absolute
-      top-4
-      right-4
-      z-[2300]
-      w-[190px]
-      rounded-xl
-      border
-      border-slate-200
-      bg-white/95
-      p-4
-      shadow-xl
-      backdrop-blur-sm
-    "
-  >
+ <div
+  className="
+    absolute
+    bottom-35
+     right-4
+    z-[2100]
+    rounded-xl
+    bg-white/95
+    p-4
+    shadow-lg
+    backdrop-blur-sm
+  "
+>
+  
               <h3 className="mb-3 text-sm font-bold text-slate-900">
                 JVPD GIS LAYERS
               </h3>
@@ -1972,7 +2007,7 @@ const [showMapActions, setShowMapActions] = useState(false)
   showAllActions={showMapActions}
 />
          {isFullscreen && selectedLandmark ? (
-  <div className="pointer-events-auto absolute bottom-[145px] left-3 right-3 z-[2200]">
+  <div className="pointer-events-auto absolute bottom-[76px] left-3 right-3 z-[2100]">
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/98 shadow-2xl backdrop-blur">
                 <div className="flex flex-col gap-3 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
@@ -2344,6 +2379,21 @@ const [showMapActions, setShowMapActions] = useState(false)
                             properties.id ?? properties.ID ?? properties.stop_id ?? properties.stopId ?? properties.No ?? properties.no ?? ''
                           )}`,
                       })
+
+                      // Move the map to the exact selected bus-stop point.
+                      // GeoJSON coordinates are converted by getFeatureLatLng().
+                      if (
+                        canonical === 'busStop' &&
+                        destination &&
+                        Number.isFinite(destination.lat) &&
+                        Number.isFinite(destination.lng)
+                      ) {
+                        mapRef.current?.flyTo(
+                          [destination.lat, destination.lng],
+                          19,
+                          { duration: 0.9 }
+                        )
+                      }
 
                       clearRouting()
                       mapRef.current?.closePopup()

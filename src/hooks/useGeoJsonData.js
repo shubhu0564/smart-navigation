@@ -8,6 +8,8 @@ const GEOJSON_FILES = {
   parkPlayground: 'park_playground.geojson',
   roads: 'roads.geojson',
   openSpaces: 'open_spaces.geojson',
+  riverNallah: 'river_nallah.geojson',
+  
 }
 
 async function fetchGeoJson(fileName) {
@@ -81,6 +83,7 @@ export function useGeoJsonData() {
     landmarks: null,
     clientBuildings: null,
     busStops: null,
+    riverNallah: null,
   })
 
   const [loading, setLoading] = useState(true)
