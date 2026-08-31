@@ -17,6 +17,10 @@ button {
   cursor: pointer;
 }
 
+/* =========================================================
+   LEAFLET MAP
+   ========================================================= */
+
 .leaflet-container {
   height: 100%;
   width: 100%;
@@ -30,7 +34,11 @@ button {
   font-size: 12px;
 }
 
-/* Navbar mobile responsiveness */
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+
 .navbar-title {
   white-space: nowrap;
   overflow: hidden;
@@ -64,7 +72,11 @@ button {
   }
 }
 
-/* Language selector mobile styling */
+
+/* =========================================================
+   LANGUAGE SELECTOR
+   ========================================================= */
+
 @media (max-width: 768px) {
   .language-select-mobile {
     appearance: none;
@@ -74,11 +86,17 @@ button {
     background-size: 14px;
     padding-right: 22px !important;
   }
-  
+
   .language-select-mobile option {
     font-size: 0.8rem;
   }
 }
+
+
+/* =========================================================
+   BUS STOP
+   ========================================================= */
+
 .bus-stop-blink {
   animation: busStopBlink 1s ease-in-out infinite;
 }
@@ -96,4 +114,84 @@ button {
       0 0 0 6px rgba(22, 163, 74, 0.25),
       0 4px 14px rgba(0, 0, 0, 0.4);
   }
+}
+
+
+/* =========================================================
+   MAIN APPLICATION HEADER
+   MUST ALWAYS BE ABOVE THE MAP
+   ========================================================= */
+
+.main-header,
+.app-header {
+  position: relative;
+  z-index: 5000 !important;
+}
+
+
+/* =========================================================
+   MAP WRAPPER
+   ========================================================= */
+
+.map-container,
+.map-wrapper {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* =========================================================
+   LEAFLET MAP
+   ========================================================= */
+
+.leaflet-container {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* =========================================================
+   LEAFLET CONTROLS
+   Keep them below the application header
+   ========================================================= */
+
+.leaflet-control-container {
+  z-index: 1000 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1000;
+}
+
+
+/* =========================================================
+   LEAFLET PANES
+   ========================================================= */
+
+.leaflet-pane {
+  z-index: 400;
+}
+
+
+/* =========================================================
+   HEADER SEPARATION
+   ========================================================= */
+
+.main-header,
+.app-header {
+  box-shadow: 0 1px 8px rgba(15, 23, 42, 0.08);
+}
+
+
+/* =========================================================
+   FULLSCREEN MAP
+   ========================================================= */
+
+.map-wrapper:fullscreen {
+  z-index: 9999 !important;
+}
+
+.map-wrapper:-webkit-full-screen {
+  z-index: 9999 !important;
 }
