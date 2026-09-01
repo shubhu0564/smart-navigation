@@ -15,6 +15,7 @@ import {
   MapPin,
   Route,
   Clock3,
+  Search,
 } from 'lucide-react'
 import { Maximize2 } from 'lucide-react'
 import { useNavigation } from '../hooks/useNavigation'
@@ -55,7 +56,8 @@ export default function MapContainer() {
   const [routeDetails, setRouteDetails] = useState(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const INITIAL_MAP_ZOOM = 16
-const [showMapActions, setShowMapActions] = useState(false)
+  const [showMapActions, setShowMapActions] = useState(false)
+  const [mapSearchQuery, setMapSearchQuery] = useState('')
 
   // On phones, keep the map passive so normal page scrolling works.
   // The user activates map gestures by tapping the map.
@@ -958,6 +960,246 @@ const parkAndGroundsInSite = useMemo(() => {
 
   /*
    * ==========================================================
+   * FULLSCREEN MAP SEARCH
+   * Searches the GIS data already loaded in this map.
+   * ==========================================================
+   */
+
+  const getFeatureSearchName = (feature) => {
+    const properties = feature?.properties || {}
+
+    return String(
+      properties.bldg_namee ??
+      properties.bldg_name ??
+      properties.building_name ??
+      properties.Name ??
+      properties.name ??
+      properties.NAME ??
+      properties.stop_name ??
+      properties.stopName ??
+      properties.landmark_name ??
+      properties.title ??
+      '',
+    ).trim()
+  }
+
+  const mapSearchResults = useMemo(() => {
+    const query = mapSearchQuery.trim().toLowerCase()
+
+    if (!query) return []
+
+    const candidates = []
+
+    const addFeatures = (data, sourceCategory, categoryLabel) => {
+      if (!data?.features || !Array.isArray(data.features)) return
+
+      data.features.forEach((feature, index) => {
+        const properties = feature?.properties || {}
+        const name = getFeatureSearchName(feature)
+
+        if (!name) return
+
+        const buildingNo =
+          properties.bldg_no ??
+          properties.building_no ??
+          properties.buildingNo ??
+          properties.No ??
+          properties.no ??
+          ''
+
+        const stopNo =
+          properties.stop_no ??
+          properties.stopNo ??
+          properties.Stop_No ??
+          properties.STOP_NO ??
+          properties.No ??
+          properties.no ??
+          ''
+
+        const number =
+          sourceCategory === 'busStop'
+            ? stopNo
+            : buildingNo
+
+        const searchableText = [
+          name,
+          number,
+          properties.address,
+          properties.road,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+
+        if (!searchableText.includes(query)) return
+
+        candidates.push({
+          id:
+            properties.id ??
+            properties.ID ??
+            properties.fid ??
+            properties.fid_1 ??
+            properties.stop_id ??
+            properties.stopId ??
+            `${sourceCategory}-${index}-${name}`,
+          feature,
+          name,
+          buildingNo: number,
+          category: categoryLabel,
+          sourceCategory,
+        })
+      })
+    }
+
+    addFeatures(clientBuildingsInSite, 'building', 'BUILDING')
+    addFeatures(busStopsInSite, 'busStop', 'BUS STOP')
+    addFeatures(parkPlaygroundInSite, 'park', 'PARK / PLAYGROUND')
+    addFeatures(parkAndGroundsInSite, 'park', 'PARK / GROUND')
+    addFeatures(visibleLandmarks, 'corporationLandmark', 'LANDMARK')
+
+    return candidates
+      .sort((a, b) => {
+        const aName = a.name.toLowerCase()
+        const bName = b.name.toLowerCase()
+
+        const aExact = aName === query ? 0 : aName.startsWith(query) ? 1 : 2
+        const bExact = bName === query ? 0 : bName.startsWith(query) ? 1 : 2
+
+        return aExact - bExact || aName.localeCompare(bName)
+      })
+      .slice(0, 8)
+  }, [
+    mapSearchQuery,
+    clientBuildingsInSite,
+    busStopsInSite,
+    parkPlaygroundInSite,
+    parkAndGroundsInSite,
+    visibleLandmarks,
+  ])
+
+  const handleMapSearch = (selectedResult = null) => {
+    const query = (selectedResult?.name || mapSearchQuery).trim().toLowerCase()
+
+    if (!query) {
+      setToast({
+        en: 'Enter a place name to search.',
+        mr: 'शोधण्यासाठी ठिकाणाचे नाव टाका.',
+      })
+      return
+    }
+
+    const candidates = []
+
+    const addFeatures = (data, sourceCategory) => {
+      if (!data?.features || !Array.isArray(data.features)) return
+
+      data.features.forEach((feature) => {
+        const name = getFeatureSearchName(feature)
+        if (name) candidates.push({ feature, name, sourceCategory })
+      })
+    }
+
+    addFeatures(clientBuildingsInSite, 'building')
+    addFeatures(busStopsInSite, 'busStop')
+    addFeatures(parkPlaygroundInSite, 'park')
+    addFeatures(parkAndGroundsInSite, 'park')
+    addFeatures(visibleLandmarks, 'corporationLandmark')
+
+    const exactMatch = candidates.find(
+      (item) => item.name.toLowerCase() === query,
+    )
+    const prefixMatch = candidates.find(
+      (item) => item.name.toLowerCase().startsWith(query),
+    )
+    const containsMatch = candidates.find(
+      (item) => item.name.toLowerCase().includes(query),
+    )
+    const match = selectedResult || exactMatch || prefixMatch || containsMatch
+
+    if (!match) {
+      setToast({
+        en: `No place found for "${mapSearchQuery.trim()}".`,
+        mr: `"${mapSearchQuery.trim()}" साठी ठिकाण सापडले नाही.`,
+      })
+      return
+    }
+
+    const destination = getFeatureLatLng(match.feature)
+    if (!destination || !mapRef.current) {
+      setToast({
+        en: 'Location data is unavailable for this place.',
+        mr: 'या ठिकाणासाठी स्थान डेटा उपलब्ध नाही.',
+      })
+      return
+    }
+
+    clearRouting()
+    mapRef.current.closePopup()
+
+    const properties = match.feature?.properties || {}
+    const buildingNo =
+      properties.bldg_no ?? properties.building_no ?? properties.buildingNo ?? properties.No ?? properties.no ?? ''
+    const stopNo =
+      properties.No ?? properties.no ?? properties.Number ?? properties.number ?? properties.stop_no ?? properties.stopNo ?? ''
+    const landmarkNo = properties.landmarkNo ?? properties.landmark_no ?? ''
+    const id =
+      properties.id ?? properties.ID ?? properties.fid ?? properties.fid_1 ?? properties.stop_id ?? properties.stopId ??
+      `${match.sourceCategory}-${destination.lat}-${destination.lng}`
+
+    setSelectedLandmark({
+      id,
+      name: match.name,
+      road: properties.road ?? properties.address ?? '',
+      category:
+        match.sourceCategory === 'busStop'
+          ? 'Bus Stop'
+          : match.sourceCategory === 'park'
+            ? 'Park / Playground'
+            : match.sourceCategory === 'building'
+              ? 'Building'
+              : 'Landmark',
+      sourceCategory: match.sourceCategory,
+      latitude: destination.lat,
+      longitude: destination.lng,
+      description: match.name,
+      bldg_namee: properties.bldg_namee ?? properties.bldg_name ?? properties.building_name ?? match.name,
+      bldg_no: buildingNo,
+      landmarkNo,
+      stopNo,
+      busStopNo: stopNo,
+      address: properties.address ?? properties.road ?? '',
+      image: null,
+      rating: properties.rating ?? 4.6,
+      steps: [],
+      feature: match.feature,
+      fromSearch: true,
+      fromCategory: false,
+    })
+
+    if (match.feature?.geometry?.type === 'Polygon' || match.feature?.geometry?.type === 'MultiPolygon') {
+      try {
+        const layer = L.geoJSON(match.feature)
+        const bounds = layer.getBounds()
+        if (bounds.isValid()) {
+          mapRef.current.fitBounds(bounds, { padding: [90, 90], maxZoom: 18, animate: true })
+        } else {
+          mapRef.current.flyTo([destination.lat, destination.lng], DETAIL_ZOOM, { duration: 0.8 })
+        }
+      } catch {
+        mapRef.current.flyTo([destination.lat, destination.lng], DETAIL_ZOOM, { duration: 0.8 })
+      }
+    } else {
+      mapRef.current.flyTo([destination.lat, destination.lng], 19, { duration: 0.9 })
+    }
+
+    setToast({
+      en: `${match.name} found`,
+      mr: `${match.name} सापडले`,
+    })
+  }
+
+  /*
+   * ==========================================================
    * START ROUTING
    * ==========================================================
    */
@@ -1609,6 +1851,221 @@ const parkAndGroundsInSite = useMemo(() => {
             touchAction: 'auto',
           }}
         >
+          {/* FULLSCREEN MAP SEARCH */}
+          {isFullscreen && (
+            <div
+              className="
+                pointer-events-auto
+                absolute
+                left-1/2
+                top-4
+                z-[2300]
+                w-[min(680px,calc(100%-32px))]
+                -translate-x-1/2
+              "
+            >
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-2
+                  rounded-full
+                  border
+                  border-slate-200
+                  bg-white/95
+                  p-2
+                  shadow-[0_10px_35px_rgba(15,23,42,0.20)]
+                  backdrop-blur-md
+                "
+              >
+                <div className="relative min-w-0 flex-1">
+                  <Search
+                    size={18}
+                    strokeWidth={2}
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+
+                  <input
+                    type="text"
+                    value={mapSearchQuery}
+                    onChange={(event) =>
+                      setMapSearchQuery(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        handleMapSearch()
+                      }
+
+                      if (event.key === 'Escape') {
+                        setMapSearchQuery('')
+                        event.currentTarget.blur()
+                      }
+                    }}
+                    placeholder="Search buildings, landmarks, parks, bus stops..."
+                    aria-label="Search map"
+                    className="
+                      h-11
+                      w-full
+                      rounded-full
+                      border
+                      border-slate-200
+                      bg-white
+                      pl-11
+                      pr-10
+                      text-sm
+                      text-slate-800
+                      outline-none
+                      placeholder:text-slate-400
+                      focus:border-teal-500
+                      focus:ring-2
+                      focus:ring-teal-500/20
+                    "
+                  />
+
+                  {mapSearchQuery && (
+                    <button
+                      type="button"
+                      title="Clear search"
+                      aria-label="Clear search"
+                      onClick={() => setMapSearchQuery('')}
+                      className="
+                        absolute
+                        right-3
+                        top-1/2
+                        -translate-y-1/2
+                        text-lg
+                        leading-none
+                        text-slate-400
+                        hover:text-slate-600
+                      "
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleMapSearch()}
+                  className="
+                    h-11
+                    shrink-0
+                    rounded-full
+                    bg-teal-600
+                    px-5
+                    text-sm
+                    font-semibold
+                    text-white
+                    shadow-sm
+                    transition
+                    hover:bg-teal-700
+                    active:scale-95
+                    focus:outline-none
+                    focus:ring-2
+                    focus:ring-teal-500/30
+                  "
+                >
+                  Start Search
+                </button>
+              </div>
+
+              {mapSearchQuery.trim() && (
+                <div
+                  className="
+                    mt-2
+                    max-h-[360px]
+                    overflow-y-auto
+                    rounded-2xl
+                    border
+                    border-slate-200
+                    bg-white
+                    shadow-xl
+                  "
+                >
+                  {mapSearchResults.length > 0 ? (
+                    mapSearchResults.map((result) => (
+                      <button
+                        key={result.id}
+                        type="button"
+                        onClick={() => {
+                          setMapSearchQuery(result.name)
+                          handleMapSearch(result)
+                        }}
+                        className="
+                          flex
+                          w-full
+                          items-center
+                          gap-3
+                          border-b
+                          border-slate-100
+                          px-4
+                          py-3
+                          text-left
+                          transition
+                          last:border-b-0
+                          hover:bg-slate-50
+                        "
+                      >
+                        <div
+                          className="
+                            flex
+                            h-9
+                            w-9
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-xl
+                            bg-teal-50
+                            text-teal-600
+                          "
+                        >
+                          <MapPin size={18} strokeWidth={2} />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-semibold text-slate-800">
+                            {result.name}
+                            {result.buildingNo
+                              ? ` — ${result.sourceCategory === 'busStop' ? 'No' : 'Building No'}: ${result.buildingNo}`
+                              : ''}
+                          </div>
+
+                          {result.buildingNo && (
+                            <div className="mt-1 text-xs text-slate-500">
+                              {result.buildingNo}
+                            </div>
+                          )}
+                        </div>
+
+                        <span
+                          className="
+                            shrink-0
+                            rounded-full
+                            bg-slate-100
+                            px-3
+                            py-1
+                            text-[10px]
+                            font-semibold
+                            uppercase
+                            tracking-[0.12em]
+                            text-slate-500
+                          "
+                        >
+                          {result.category}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-5 py-4 text-sm text-slate-500">
+                      No places found
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {loading && (
             <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center gap-3 bg-slate-50/80 px-4 text-center">
               <LoaderCircle
@@ -1636,7 +2093,7 @@ const parkAndGroundsInSite = useMemo(() => {
 
           {isTouchDevice && !mapInteractionActive && (
             <div
-              className="pointer-events-none absolute left-1/2 top-4 z-[900] -translate-x-1/2 rounded-full bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow-md backdrop-blur sm:hidden"
+              className="pointer-events-none absolute left-1/2 top-20 z-[900] -translate-x-1/2 rounded-full bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow-md backdrop-blur sm:hidden"
             >
               Tap the map to interact
             </div>
@@ -1940,8 +2397,8 @@ const parkAndGroundsInSite = useMemo(() => {
  <div
   className="
     absolute
-    bottom-35
-     right-4
+    top-4
+    right-4
     z-[2100]
     rounded-xl
     bg-white/95
@@ -1989,6 +2446,17 @@ const parkAndGroundsInSite = useMemo(() => {
                 <div className="flex items-center gap-3">
                   <span className="block h-4 w-7 rounded-sm border border-green-600 bg-green-100" />
                   <span>Open Space</span>
+                </div>
+
+                {/* RIVER / NALLAH */}
+                <div className="flex items-center gap-3">
+                  <span
+                    className="block w-7"
+                    style={{
+                      borderTop: '4px solid #2563eb',
+                    }}
+                  />
+                  <span>River / Nallah</span>
                 </div>
 
               </div>

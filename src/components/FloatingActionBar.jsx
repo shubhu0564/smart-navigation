@@ -1,6 +1,7 @@
 import React from 'react'
 
 import {
+  Search,
   Crosshair,
   MapPin,
   RotateCcw,
@@ -10,6 +11,7 @@ import {
 
 export default function FloatingActionBar({
   onLocate,
+  onSearch,
   onReset,
   onGoogleMaps,
   onFullscreen,
@@ -26,40 +28,64 @@ export default function FloatingActionBar({
 
   return (
     <div
-      className={`
+      className="
         pointer-events-none
         absolute
+        bottom-4
+        left-190
         z-[2200]
-        ${
-          isFullscreen
-            ? 'right-4 top-1/2 -translate-y-1/2'
-            : 'bottom-3 right-3'
-        }
-      `}
+        -translate-x-1/2
+      
+      "
     >
       <div
-        className={`
+        className="
           pointer-events-auto
+          flex
+          items-center
+          gap-1
           rounded-full
           border
           border-slate-200
           bg-white/95
-          p-2
-          shadow-[0_8px_30px_rgba(15,23,42,0.18)]
+          p-1.5
+          shadow-[0_6px_20px_rgba(15,23,42,0.18)]
           backdrop-blur-md
-          ${
-            isFullscreen
-              ? 'flex flex-col items-center gap-2'
-              : 'flex items-center'
-          }
-        `}
+        "
       >
 
-        {/* =================================================
-            FULLSCREEN MODE ONLY
-            MY LOCATION
-           ================================================= */}
+        {/* SEARCH — fullscreen only */}
+        {isFullscreen && (
+          <button
+            type="button"
+            title="Search"
+            aria-label="Search"
+            onClick={(event) =>
+              handleClick(event, onSearch)
+            }
+            className="
+              flex
+              h-9
+              w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-full
+              border
+              border-slate-200
+              bg-white
+              text-slate-600
+              shadow-sm
+              hover:bg-slate-50
+              hover:text-teal-600
+              active:scale-95
+            "
+          >
+            <Search size={17} strokeWidth={2} />
+          </button>
+        )}
 
+        {/* LOCATION */}
         {isFullscreen && (
           <button
             type="button"
@@ -70,8 +96,8 @@ export default function FloatingActionBar({
             }
             className="
               flex
-              h-11
-              w-11
+              h-9
+              w-9
               shrink-0
               items-center
               justify-center
@@ -81,27 +107,15 @@ export default function FloatingActionBar({
               bg-teal-50
               text-teal-600
               shadow-sm
-              transition-all
-              duration-150
               hover:bg-teal-100
               active:scale-95
-              focus:outline-none
-              focus:ring-2
-              focus:ring-teal-500/30
             "
           >
-            <Crosshair
-              size={19}
-              strokeWidth={2}
-            />
+            <Crosshair size={17} strokeWidth={2} />
           </button>
         )}
 
-        {/* =================================================
-            FULLSCREEN MODE ONLY
-            GOOGLE MAPS
-           ================================================= */}
-
+        {/* GOOGLE MAPS */}
         {isFullscreen && (
           <button
             type="button"
@@ -112,8 +126,8 @@ export default function FloatingActionBar({
             }
             className="
               flex
-              h-11
-              w-11
+              h-9
+              w-9
               shrink-0
               items-center
               justify-center
@@ -123,28 +137,16 @@ export default function FloatingActionBar({
               bg-white
               text-slate-600
               shadow-sm
-              transition-all
-              duration-150
               hover:bg-slate-50
               hover:text-teal-600
               active:scale-95
-              focus:outline-none
-              focus:ring-2
-              focus:ring-teal-500/30
             "
           >
-            <MapPin
-              size={19}
-              strokeWidth={2}
-            />
+            <MapPin size={17} strokeWidth={2} />
           </button>
         )}
 
-        {/* =================================================
-            FULLSCREEN MODE ONLY
-            RESET MAP
-           ================================================= */}
-
+        {/* RESET */}
         {isFullscreen && (
           <button
             type="button"
@@ -155,8 +157,8 @@ export default function FloatingActionBar({
             }
             className="
               flex
-              h-11
-              w-11
+              h-9
+              w-9
               shrink-0
               items-center
               justify-center
@@ -166,47 +168,35 @@ export default function FloatingActionBar({
               bg-white
               text-slate-600
               shadow-sm
-              transition-all
-              duration-150
               hover:bg-slate-50
               hover:text-teal-600
               active:scale-95
-              focus:outline-none
-              focus:ring-2
-              focus:ring-teal-500/30
             "
           >
-            <RotateCcw
-              size={19}
-              strokeWidth={2}
-            />
+            <RotateCcw size={17} strokeWidth={2} />
           </button>
         )}
 
-        {/* =================================================
-            FULLSCREEN / ENHANCE
-            ALWAYS VISIBLE
-           ================================================= */}
-
+        {/* FULLSCREEN / EXIT */}
         <button
           type="button"
           title={
             isFullscreen
               ? 'Exit Fullscreen'
-              : 'Enhance Map'
+              : 'Fullscreen'
           }
           aria-label={
             isFullscreen
               ? 'Exit Fullscreen'
-              : 'Enhance Map'
+              : 'Fullscreen'
           }
           onClick={(event) =>
             handleClick(event, onFullscreen)
           }
           className="
             flex
-            h-11
-            w-11
+            h-9
+            w-9
             shrink-0
             items-center
             justify-center
@@ -216,26 +206,15 @@ export default function FloatingActionBar({
             bg-white
             text-slate-600
             shadow-sm
-            transition-all
-            duration-150
-            hover:bg-teal-50
+            hover:bg-slate-50
             hover:text-teal-600
             active:scale-95
-            focus:outline-none
-            focus:ring-2
-            focus:ring-teal-500/30
           "
         >
           {isFullscreen ? (
-            <Minimize2
-              size={19}
-              strokeWidth={2}
-            />
+            <Minimize2 size={17} strokeWidth={2} />
           ) : (
-            <Maximize2
-              size={19}
-              strokeWidth={2}
-            />
+            <Maximize2 size={17} strokeWidth={2} />
           )}
         </button>
 
