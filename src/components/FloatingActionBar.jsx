@@ -1,20 +1,22 @@
 import React from 'react'
 
 import {
-  Search,
+  Compass,
   Crosshair,
   MapPin,
   RotateCcw,
+  Radio,
   Maximize2,
   Minimize2,
 } from 'lucide-react'
 
 export default function FloatingActionBar({
   onLocate,
-  onSearch,
+  onNavigate,
   onReset,
   onGoogleMaps,
   onFullscreen,
+  onLiveGps,
   isFullscreen = false,
 }) {
   const handleClick = (event, callback) => {
@@ -31,11 +33,9 @@ export default function FloatingActionBar({
       className="
         pointer-events-none
         absolute
-        bottom-4
-        left-190
+        bottom-3
+        right-3
         z-[2200]
-        -translate-x-1/2
-      
       "
     >
       <div
@@ -49,174 +49,290 @@ export default function FloatingActionBar({
           border-slate-200
           bg-white/95
           p-1.5
-          shadow-[0_6px_20px_rgba(15,23,42,0.18)]
+          shadow-[0_8px_30px_rgba(15,23,42,0.18)]
           backdrop-blur-md
+          max-w-[calc(100vw-16px)]
         "
       >
 
-        {/* SEARCH — fullscreen only */}
-        {isFullscreen && (
-          <button
-            type="button"
-            title="Search"
-            aria-label="Search"
-            onClick={(event) =>
-              handleClick(event, onSearch)
-            }
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              border
-              border-slate-200
-              bg-white
-              text-slate-600
-              shadow-sm
-              hover:bg-slate-50
-              hover:text-teal-600
-              active:scale-95
-            "
-          >
-            <Search size={17} strokeWidth={2} />
-          </button>
-        )}
+        {/* =========================================
+            NORMAL MAP
+            ONLY FULLSCREEN BUTTON
+           ========================================= */}
 
-        {/* LOCATION */}
-        {isFullscreen && (
+        {!isFullscreen && (
           <button
             type="button"
-            title="My Location"
-            aria-label="My Location"
+            title="Fullscreen"
+            aria-label="Fullscreen"
             onClick={(event) =>
-              handleClick(event, onLocate)
+              handleClick(event, onFullscreen)
             }
             className="
               flex
-              h-9
-              w-9
+              h-10
+              w-10
               shrink-0
               items-center
               justify-center
               rounded-full
               border
               border-teal-200
-              bg-teal-50
-              text-teal-600
-              shadow-sm
-              hover:bg-teal-100
-              active:scale-95
-            "
-          >
-            <Crosshair size={17} strokeWidth={2} />
-          </button>
-        )}
-
-        {/* GOOGLE MAPS */}
-        {isFullscreen && (
-          <button
-            type="button"
-            title="Open Google Maps"
-            aria-label="Open Google Maps"
-            onClick={(event) =>
-              handleClick(event, onGoogleMaps)
-            }
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              border
-              border-slate-200
               bg-white
               text-slate-600
               shadow-sm
+              transition-all
+              duration-150
               hover:bg-slate-50
               hover:text-teal-600
               active:scale-95
+              focus:outline-none
+              focus:ring-2
+              focus:ring-teal-500/30
             "
           >
-            <MapPin size={17} strokeWidth={2} />
+            <Maximize2
+              size={18}
+              strokeWidth={2}
+            />
           </button>
         )}
 
-        {/* RESET */}
+
+        {/* =========================================
+            FULLSCREEN / ENHANCED MAP
+            ALL BUTTONS
+           ========================================= */}
+
         {isFullscreen && (
-          <button
-            type="button"
-            title="Reset Map"
-            aria-label="Reset Map"
-            onClick={(event) =>
-              handleClick(event, onReset)
-            }
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              border
-              border-slate-200
-              bg-white
-              text-slate-600
-              shadow-sm
-              hover:bg-slate-50
-              hover:text-teal-600
-              active:scale-95
-            "
-          >
-            <RotateCcw size={17} strokeWidth={2} />
-          </button>
-        )}
+          <>
+            {/* GET DIRECTION */}
+            <button
+              type="button"
+              title="Get Direction"
+              aria-label="Get Direction"
+              onClick={(event) =>
+                handleClick(event, onNavigate)
+              }
+              className="
+                flex
+                h-10
+                w-10
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-slate-200
+                bg-white
+                text-slate-600
+                shadow-sm
+                transition-all
+                duration-150
+                hover:bg-slate-50
+                hover:text-teal-600
+                active:scale-95
+                focus:outline-none
+                focus:ring-2
+                focus:ring-teal-500/30
+              "
+            >
+              <Compass
+                size={18}
+                strokeWidth={2}
+              />
+            </button>
 
-        {/* FULLSCREEN / EXIT */}
-        <button
-          type="button"
-          title={
-            isFullscreen
-              ? 'Exit Fullscreen'
-              : 'Fullscreen'
-          }
-          aria-label={
-            isFullscreen
-              ? 'Exit Fullscreen'
-              : 'Fullscreen'
-          }
-          onClick={(event) =>
-            handleClick(event, onFullscreen)
-          }
-          className="
-            flex
-            h-9
-            w-9
-            shrink-0
-            items-center
-            justify-center
-            rounded-full
-            border
-            border-teal-200
-            bg-white
-            text-slate-600
-            shadow-sm
-            hover:bg-slate-50
-            hover:text-teal-600
-            active:scale-95
-          "
-        >
-          {isFullscreen ? (
-            <Minimize2 size={17} strokeWidth={2} />
-          ) : (
-            <Maximize2 size={17} strokeWidth={2} />
-          )}
-        </button>
+
+            {/* MY LOCATION */}
+            <button
+              type="button"
+              title="My Location"
+              aria-label="My Location"
+              onClick={(event) =>
+                handleClick(event, onLocate)
+              }
+              className="
+                flex
+                h-10
+                w-10
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-teal-200
+                bg-teal-50
+                text-teal-600
+                shadow-sm
+                transition-all
+                duration-150
+                hover:bg-teal-100
+                active:scale-95
+                focus:outline-none
+                focus:ring-2
+                focus:ring-teal-500/30
+              "
+            >
+              <Crosshair
+                size={18}
+                strokeWidth={2}
+              />
+            </button>
+
+
+            {/* GOOGLE MAPS */}
+            <button
+              type="button"
+              title="Open Google Maps"
+              aria-label="Open Google Maps"
+              onClick={(event) =>
+                handleClick(event, onGoogleMaps)
+              }
+              className="
+                flex
+                h-10
+                w-10
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-slate-200
+                bg-white
+                text-slate-600
+                shadow-sm
+                transition-all
+                duration-150
+                hover:bg-slate-50
+                hover:text-teal-600
+                active:scale-95
+                focus:outline-none
+                focus:ring-2
+                focus:ring-teal-500/30
+              "
+            >
+              <MapPin
+                size={18}
+                strokeWidth={2}
+              />
+            </button>
+
+
+            {/* RESET MAP */}
+            <button
+              type="button"
+              title="Reset Map"
+              aria-label="Reset Map"
+              onClick={(event) =>
+                handleClick(event, onReset)
+              }
+              className="
+                flex
+                h-10
+                w-10
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-slate-200
+                bg-white
+                text-slate-600
+                shadow-sm
+                transition-all
+                duration-150
+                hover:bg-slate-50
+                hover:text-teal-600
+                active:scale-95
+                focus:outline-none
+                focus:ring-2
+                focus:ring-teal-500/30
+              "
+            >
+              <RotateCcw
+                size={18}
+                strokeWidth={2}
+              />
+            </button>
+
+
+            {/* LIVE GPS */}
+            <button
+              type="button"
+              title="Live GPS"
+              aria-label="Live GPS"
+              onClick={(event) =>
+                handleClick(event, onLiveGps)
+              }
+              className="
+                flex
+                h-10
+                w-10
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-slate-200
+                bg-white
+                text-slate-600
+                shadow-sm
+                transition-all
+                duration-150
+                hover:bg-slate-50
+                hover:text-teal-600
+                active:scale-95
+                focus:outline-none
+                focus:ring-2
+                focus:ring-teal-500/30
+              "
+            >
+              <Radio
+                size={18}
+                strokeWidth={2}
+              />
+            </button>
+
+
+            {/* EXIT FULLSCREEN */}
+            <button
+              type="button"
+              title="Exit Fullscreen"
+              aria-label="Exit Fullscreen"
+              onClick={(event) =>
+                handleClick(event, onFullscreen)
+              }
+              className="
+                flex
+                h-10
+                w-10
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-teal-200
+                bg-white
+                text-slate-600
+                shadow-sm
+                transition-all
+                duration-150
+                hover:bg-slate-50
+                hover:text-teal-600
+                active:scale-95
+                focus:outline-none
+                focus:ring-2
+                focus:ring-teal-500/30
+              "
+            >
+              <Minimize2
+                size={18}
+                strokeWidth={2}
+              />
+            </button>
+          </>
+        )}
 
       </div>
     </div>

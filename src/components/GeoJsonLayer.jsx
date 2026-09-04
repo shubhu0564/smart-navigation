@@ -244,16 +244,43 @@ export default function GeoJsonLayer({
   }
 
   const pointToLayer = (feature, latlng) => {
-    // Bus stops use Leaflet's fixed default marker icon.
-    if (layerKey === 'busStops') {
-      return L.circleMarker(latlng, {
-        radius: 6,
-        color: '#2563eb',
-        fillColor: '#60a5fa',
-        fillOpacity: 0.95,
-        weight: 2,
-      })
-    }
+    // Bus stops: only the currently selected stop is red.
+    // All other bus stops always remain blue.
+    
+  if (layerKey === 'busStops') {
+  const props = feature?.properties || {}
+
+  const coordinates = feature?.geometry?.coordinates
+
+  const longitude = Number(coordinates?.[0])
+  const latitude = Number(coordinates?.[1])
+
+  const name =
+    props.Name ??
+    props.name ??
+    props.NAME ??
+    props.stop_name ??
+    props.stopName ??
+    'Bus Stop'
+
+  const busStopKey =
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude)
+      ? `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`
+      : ''
+
+  const isSelectedBusStop =
+    activeFeatureId != null &&
+    String(activeFeatureId) === String(busStopKey)
+
+  return L.circleMarker(latlng, {
+    radius: isSelectedBusStop ? 10 : 6,
+    color: isSelectedBusStop ? '#991b1b' : '#2563eb',
+    fillColor: isSelectedBusStop ? '#dc2626' : '#60a5fa',
+    fillOpacity: 0.95,
+    weight: isSelectedBusStop ? 3 : 2,
+  })
+}
 
     // Landmarks are not rendered as point icons in the main map.
     // Buildings are the primary clickable map features.
