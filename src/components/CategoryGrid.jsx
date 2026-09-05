@@ -206,6 +206,7 @@ const ALIAS_MAP = {
     'vrajlal parekh vidyanidhi',
     'vrajlal parakh vidyanidhi',
     'vrajlal parekh',
+    'vidhyanidhi educational complex',
   ],
 
   'manoj kumar garden': [
