@@ -28,7 +28,7 @@ const PLACE_DEFINITIONS = {
       number: 2,
     },
     {
-      name: 'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
+      name: 'Kamla Raheja Vidyanidhi institute for architecture and environmental studies',
       number: 3,
     },
     {
@@ -121,7 +121,7 @@ const PLACE_DEFINITIONS = {
 
   educationalInstitute: [
     {
-      name: 'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
+      name: 'Kamla Raheja Vidyanidhi institute for architecture and environmental studies',
       number: 1,
     },
     {
@@ -681,6 +681,9 @@ const [showCategoryPopup, setShowCategoryPopup] =
         : null
 
       add(educationBuildings)
+
+      // Educational places must resolve only against Edu_Bldg features.
+      return collections
     }
 
     if (canonical === 'park') {
@@ -881,6 +884,9 @@ const [showCategoryPopup, setShowCategoryPopup] =
 
     const properties = feature.properties || {}
     const isBusStop = canonical === 'busStop'
+    const isOpenSpace =
+      canonical === 'park' &&
+      geoJson.openSpaces?.features?.includes(feature)
 
     const stopNo =
       properties.No ?? properties.no ??
@@ -908,8 +914,14 @@ const [showCategoryPopup, setShowCategoryPopup] =
           : `category-${canonical}-${index}-${normalise(place?.name || '')}`,
       name: place.name,
       road: properties.road ?? properties.address ?? '',
-      category: canonical,
-      sourceCategory: isBusStop ? 'busStop' : canonical,
+      category: isOpenSpace ? 'Open Space' : canonical,
+      sourceCategory: isBusStop
+        ? 'busStop'
+        : isOpenSpace
+          ? 'openSpace'
+          : canonical === 'landmark'
+            ? 'corporationLandmark'
+            : canonical,
       latitude: null,
       longitude: null,
       description: place.name,

@@ -185,7 +185,7 @@ export default function MapContainer() {
     'Kishore Kumar Bagh',
     'Vijay Tendulkar Amphitheatre',
     'Kaifi Azmi Park',
-    'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
+    'Kamla Raheja Vidyanidhi institute for architecture and environmental studies',
     'Vrajlal Parekh Vidyanidhi High School',
     'Manoj Kumar Garden',
     'Smt SB Aarya Vidya Mandir',
@@ -231,6 +231,8 @@ export default function MapContainer() {
 
       'kamla raheja vidyanidhi institute for architecture environmental studies': 4,
       'kamla raheja vidyanidhi': 4,
+      'kamla rheja vidyanidhi institute for architecture environmental studies': 4,
+      'kamla rheja vidyanidhi': 4,
       'krvia': 4,
 
       'vrajlal parekh vidyanidhi high school': 5,
@@ -480,7 +482,13 @@ export default function MapContainer() {
         properties.Name ??
         properties.name ??
         fallback,
-      ).replace(/\bRheja\b/gi, 'Raheja').trim()
+      )
+        .replace(
+          /kamla\s+rheja\s+vidyanidhi\s+institute\s+for\s+architecture\s+and\s+environmental\s+studies/i,
+          'Kamla Raheja Vidyanidhi institute for architecture and environmental studies',
+        )
+        .replace(/\bRheja\b/gi, 'Raheja')
+        .trim()
   }
 
   const getMapSearchNumber = (feature) => {
@@ -1004,6 +1012,25 @@ export default function MapContainer() {
     if (!feature) return
 
     try {
+      const isPolygonFeature =
+        feature.geometry?.type === 'Polygon' ||
+        feature.geometry?.type === 'MultiPolygon'
+
+      if (selectedLandmark.fromSearch === true && isPolygonFeature) {
+        const featureLayer = L.geoJSON(feature)
+        const bounds = featureLayer.getBounds()
+
+        if (bounds.isValid()) {
+          mapRef.current.fitBounds(bounds, {
+            padding: [60, 60],
+            maxZoom: DETAIL_ZOOM,
+            animate: true,
+          })
+        }
+
+        return
+      }
+
       const isSearchSelection =
         selectedLandmark.fromSearch === true &&
         selectedLandmark.fromCategory !== true
@@ -1061,7 +1088,8 @@ export default function MapContainer() {
       // Direct building/landmark selection: focus exact geometry.
       if (
         selectedLandmark.sourceCategory === 'building' ||
-        selectedLandmark.sourceCategory === 'corporationLandmark'
+        selectedLandmark.sourceCategory === 'corporationLandmark' ||
+        selectedLandmark.sourceCategory === 'educationalInstitute'
       ) {
         const layer = L.geoJSON(feature)
         const bounds = layer.getBounds()
@@ -2452,7 +2480,7 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
             ]}
             zoom={16}
             scrollWheelZoom={false}
-            dragging={true}
+            dragging={isFullscreen}
             touchZoom={isFullscreen}
             doubleClickZoom={false}
             zoomControl={!isFullscreen}
@@ -2538,6 +2566,25 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
 
                   layer.on('click', () => {
                     const label = name || (isPlayground ? 'Playground' : 'Open Space')
+                    const destination = getFeatureLatLng(feature)
+
+                    setSelectedLandmark({
+                      id: properties.id ?? properties.ID ?? `open-space-${label}`,
+                      name: label,
+                      category: 'Open Space',
+                      sourceCategory: 'openSpace',
+                      latitude: destination?.lat ?? null,
+                      longitude: destination?.lng ?? null,
+                      description: label,
+                      address: properties.address ?? properties.road ?? '',
+                      image: null,
+                      rating: 4.6,
+                      steps: [],
+                      feature,
+                      fromSearch: false,
+                      fromCategory: false,
+                    })
+
                     setToast({ en: label, mr: label })
                   })
                 }}
@@ -3103,6 +3150,9 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
                       const isLandmark =
                         source === 'corporationLandmark'
 
+                      const isOpenSpace =
+                        source === 'openSpace'
+
                       const isBuilding =
                         source === 'building'
 
@@ -3111,6 +3161,8 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
                           ? 'Bus stop'
                           : isLandmark
                             ? 'Landmark'
+                            : isOpenSpace
+                              ? 'Selected place'
                             : isBuilding
                               ? (
                                   String(
@@ -3162,7 +3214,9 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
 
                           <div className="min-w-0">
                             <p className="truncate text-sm font-bold text-slate-900">
-                              {selectedLandmark.name ||
+                              {isOpenSpace
+                                ? (selectedLandmark.name || 'Open Space')
+                                : selectedLandmark.name ||
                                 getText(
                                   {
                                     en: 'Selected place',
@@ -3232,6 +3286,9 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
                 const isLandmark =
                   source === 'corporationLandmark'
 
+                const isOpenSpace =
+                  source === 'openSpace'
+
                 const isBuilding =
                   source === 'building'
 
@@ -3240,6 +3297,8 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
                     ? 'Bus stop'
                     : isLandmark
                       ? 'Landmark'
+                      : isOpenSpace
+                        ? 'Selected place'
                       : isBuilding
                         ? (
                             String(
@@ -3291,7 +3350,9 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
 
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-900">
-                        {selectedLandmark.name ||
+                        {isOpenSpace
+                          ? (selectedLandmark.name || 'Open Space')
+                          : selectedLandmark.name ||
                           getText(
                             {
                               en: 'Selected place',
@@ -3398,6 +3459,9 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
                       const properties = placeFeature.properties || {}
                       const destination = getFeatureLatLng(placeFeature)
                       const canonical = selectedLandmark.category
+                      const isOpenSpace =
+                        canonical === 'park' &&
+                        geoJson.openSpaces?.features?.includes(placeFeature)
 
                       setSelectedLandmark({
                         id:
@@ -3406,11 +3470,13 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
                             : `category-${canonical}-${index}-${String(place?.name || '').replace(/[^a-zA-Z0-9]+/g, '-')}`,
                         name: place?.name || 'Selected Place',
                         road: properties.road ?? properties.address ?? '',
-                        category: canonical,
+                        category: isOpenSpace ? 'Open Space' : canonical,
                         categoryId: canonical,
                         sourceCategory: canonical === 'landmark'
                           ? 'corporationLandmark'
-                          : canonical,
+                          : isOpenSpace
+                            ? 'openSpace'
+                            : canonical,
                         latitude: destination?.lat ?? null,
                         longitude: destination?.lng ?? null,
                         description: place?.name || '',

@@ -19,7 +19,7 @@ export default function SearchSuggestions({
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
-          className="absolute left-0 right-0 top-full z-[1200] mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+          className="relative z-[1200] mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
           onMouseDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
           onTouchStart={(event) => event.stopPropagation()}

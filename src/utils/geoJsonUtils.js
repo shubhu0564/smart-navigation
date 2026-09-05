@@ -13,7 +13,7 @@ export const CORPORATION_LANDMARKS = [
   },
   {
     id: 4,
-    name: 'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
+    name: 'Kamla Raheja Vidyanidhi institute for architecture and environmental studies',
   },
   {
     id: 5,

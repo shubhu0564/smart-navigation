@@ -38,8 +38,15 @@ export function useSearch() {
       const pool = []
 
       // include normalized landmarks (already formatted)
-      const landmarkPool = selectedCategory && selectedCategory !== 'all' ? landmarks.filter((landmark) => landmark.category === selectedCategory) : landmarks
-      pool.push(...landmarkPool)
+      const landmarkPool = selectedCategory && selectedCategory !== 'all'
+        ? landmarks.filter((landmark) => landmark.category === selectedCategory)
+        : landmarks
+      const filteredLandmarkPool = selectedCategory === 'educationalInstitute'
+        ? landmarkPool.filter((landmark) => ['yes', 'true', '1'].includes(
+            String(landmark?.feature?.properties?.Edu_Bldg ?? '').trim().toLowerCase(),
+          ))
+        : landmarkPool
+      pool.push(...filteredLandmarkPool)
 
       // NOTE: intentionally not including legacy `buildings.geojson` here.
       // Search pool intentionally restricted to derived landmarks, client_buildings, and bus stops.
@@ -49,9 +56,24 @@ export function useSearch() {
       const clientFeatures = (geoJson.siteBoundary && geoJson.clientBuildings) ? (filterGeoJsonBySite(geoJson.clientBuildings, geoJson.siteBoundary).features || []) : (geoJson.clientBuildings?.features || [])
       clientFeatures.forEach((feature, idx) => {
         const props = feature?.properties || {}
+        const isEducationalBuilding = ['yes', 'true', '1'].includes(
+          String(props.Edu_Bldg ?? '').trim().toLowerCase(),
+        )
+
+        if (
+          selectedCategory === 'educationalInstitute' &&
+          !isEducationalBuilding
+        ) {
+          return
+        }
         const rawName = props.bldg_namee ?? null
         const rawBno = props.bldg_no ?? (props.fid_1 ?? null)
-        const displayName = rawName && String(rawName).trim() !== '' ? String(rawName).trim() : 'Unnamed Building'
+        const rawDisplayName = rawName && String(rawName).trim() !== ''
+          ? String(rawName).trim()
+          : 'Unnamed Building'
+        const displayName = /kamla\s+rheja\s+vidyanidhi/i.test(rawDisplayName)
+          ? 'Kamla Raheja Vidyanidhi institute for architecture and environmental studies'
+          : rawDisplayName
         const displayBno = rawBno !== null && rawBno !== undefined && String(rawBno).trim() !== '' ? String(rawBno) : 'Not assigned'
         const name = `${displayName} — Building No: ${displayBno}`
         const bno = rawBno
@@ -75,7 +97,9 @@ export function useSearch() {
 
         const idVal = props.fid_1 ?? props.bldg_no ?? idx
         // derive category id from the client building properties
-        const categoryId = deriveFeatureCategory(feature, 'clientBuildings')
+        const categoryId = isEducationalBuilding
+          ? 'educationalInstitute'
+          : deriveFeatureCategory(feature, 'clientBuildings')
         const item = {
           id: `client-building-${idVal}-${idx}`,
           // display full label in the name so suggestions show name + building no
@@ -86,7 +110,9 @@ export function useSearch() {
           road: '',
           category: categoryId,
           categoryLabel: getCategoryLabel(categoryId, 'en'),
-          sourceCategory: 'building',
+          sourceCategory: isEducationalBuilding
+            ? 'educationalInstitute'
+            : 'building',
           // keep numeric bno as description so searching numbers matches
           description: rawBno !== null && rawBno !== undefined ? String(rawBno) : 'Not assigned',
           latitude: lat,
@@ -137,44 +163,80 @@ export function useSearch() {
     window.localStorage.setItem('gulmohar-search-history', JSON.stringify(nextHistory))
   }
 
+  const removeFromHistory = (value) => {
+    const trimmed = String(value ?? '').trim()
+    if (!trimmed) return
+
+    const nextHistory = history.filter((item) => item !== trimmed)
+    setHistory(nextHistory)
+    window.localStorage.setItem('gulmohar-search-history', JSON.stringify(nextHistory))
+  }
+
   const selectSuggestion = (item) => {
     // Normalize selection into the shape expected by MapContainer
+    const isLandmarkFeature =
+      item?.feature?.geometry?.type === 'Polygon' ||
+      item?.feature?.geometry?.type === 'MultiPolygon'
+    const isCorporationLandmark =
+      item?.category === 'landmark' ||
+      item?.sourceCategory === 'corporationLandmark' ||
+      item?.sourceCategory === 'clientBuildings'
     const base = {
       id: item.id,
-      name: item.name ?? item.title ?? 'Unknown',
+      name: /kamla\s+rheja\s+vidyanidhi/i.test(String(item.name ?? ''))
+        ? 'Kamla Raheja Vidyanidhi institute for architecture and environmental studies'
+        : item.name ?? item.title ?? 'Unknown',
       road: item.road ?? '',
       category: item.category ?? item.sourceCategory ?? 'landmark',
       description: item.description ?? '',
     }
 
-    if (item.sourceCategory === 'building') {
-      // Use the original GeoJSON feature and mark selection as coming from search
-      setSelectedLandmark({
-        ...base,
-        sourceCategory: 'building',
-        latitude: item.latitude,
-        longitude: item.longitude,
-        feature: item.feature,
-        bldg_namee: item.bldg_namee ?? null,
-        bldg_no: item.bldg_no ?? null,
-        fromSearch: true,
-      })
-    } else if (item.sourceCategory === 'busStop') {
-      setSelectedLandmark({
-        ...base,
-        sourceCategory: 'busStop',
-        latitude: item.latitude,
-        longitude: item.longitude,
-        feature: item.feature,
-      })
-    } else {
-      setSelectedLandmark(item)
-    }
+    const mapSection = document.getElementById('landmark-map-section')
+    mapSection?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+    // Let the smooth scroll bring the map into view before selection triggers
+    // the existing exact-feature zoom and highlight effect.
+    window.setTimeout(() => {
+      if (
+        item.sourceCategory === 'building' ||
+        item.sourceCategory === 'educationalInstitute'
+      ) {
+        // Use the original GeoJSON feature and mark selection as coming from search
+        setSelectedLandmark({
+          ...base,
+          sourceCategory: item.sourceCategory,
+          latitude: item.latitude,
+          longitude: item.longitude,
+          feature: item.feature,
+          bldg_namee: item.bldg_namee ?? null,
+          bldg_no: item.bldg_no ?? null,
+          fromSearch: true,
+        })
+      } else if (item.sourceCategory === 'busStop') {
+        setSelectedLandmark({
+          ...base,
+          sourceCategory: 'busStop',
+          latitude: item.latitude,
+          longitude: item.longitude,
+          feature: item.feature,
+        })
+      } else {
+        setSelectedLandmark({
+          ...item,
+          ...base,
+          sourceCategory: isCorporationLandmark && isLandmarkFeature
+            ? 'corporationLandmark'
+            : item.sourceCategory,
+          fromSearch: true,
+          feature: item.feature,
+        })
+      }
+    }, 500)
 
     setSearchQuery(item.name)
     setInputValue(item.name)
     setShowSuggestions(false)
-    saveToHistory(item.name)
+    removeFromHistory(item.name)
     setToast({ en: `Focused on ${item.name}`, mr: `${item.name}कडे केंद्रित केले` })
   }
 
