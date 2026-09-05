@@ -1,12 +1,11 @@
-import { Search, LocateFixed, X } from 'lucide-react'
-import { FaMicrophone } from 'react-icons/fa'
+import { Search, X } from 'lucide-react'
 import { useNavigation } from '../hooks/useNavigation'
 import { useSearch } from '../hooks/useSearch'
 import { getText } from '../utils/helpers'
 import SearchSuggestions from './SearchSuggestions'
 
 export default function SearchBar() {
-  const { language, setToast, setUserLocation } = useNavigation()
+  const { language } = useNavigation()
   const {
     inputValue,
     setInputValue,
@@ -21,23 +20,6 @@ export default function SearchBar() {
     clearHistory,
     handleKeyDown,
   } = useSearch()
-
-  const handleLocate = () => {
-    if (!navigator.geolocation) {
-      setToast({ en: 'Location permission is not available', mr: 'स्थान परवानगी उपलब्ध नाही' })
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude })
-        setToast({ en: 'Current location updated', mr: 'सध्याचे स्थान अपडेट झाले' })
-      },
-      () => {
-        setToast({ en: 'Location access was denied', mr: 'स्थान प्रवेश नाकारला' })
-      },
-    )
-  }
 
   const handleSuggestionSelect = (item) => {
     selectSuggestion(item)
@@ -85,21 +67,6 @@ export default function SearchBar() {
           />
         </div>
 
-        <button
-          type="button"
-          onClick={() => setToast({ en: 'Voice search is ready', mr: 'व्हॉइस शोध तयार आहे' })}
-          className="rounded-lg bg-teal-600 p-2 text-white shadow-sm sm:rounded-2xl sm:p-3"
-        >
-          <FaMicrophone size={14} className="sm:h-[18px] sm:w-[18px]" />
-        </button>
-
-        <button
-          type="button"
-          onClick={handleLocate}
-          className="rounded-lg border border-slate-200 p-2 text-slate-600 sm:rounded-2xl sm:p-3"
-        >
-          <LocateFixed size={14} className="sm:h-[18px] sm:w-[18px]" />
-        </button>
       </div>
 
       {!inputValue && recentSearches.length > 0 && (

@@ -93,7 +93,7 @@ export default function GeoJsonLayer({
 
       const buildingName = getSafeString(
         feature.properties.bldg_namee
-      )
+      ).replace(/\bRheja\b/gi, 'Raheja')
 
       return `
         <div style="
@@ -127,7 +127,8 @@ export default function GeoJsonLayer({
       const playgroundName =
         getSafeString(
           feature.properties.Name ??
-          feature.properties.name
+          feature.properties.name ??
+          'Playground'
         )
 
       const playgroundNo =
@@ -189,10 +190,12 @@ export default function GeoJsonLayer({
       description,
     } = feature.properties
 
+    const displayName = String(name || 'Feature').replace(/\bRheja\b/gi, 'Raheja')
+
     return `
       <div style="font-family: system-ui, sans-serif; line-height: 1.4;">
         <strong style="display:block; margin-bottom:6px;">
-          ${name || 'Feature'}
+          ${displayName}
         </strong>
         <div style="font-size:13px; color:#334155; margin-bottom:4px;">
           ${road || category || ''}

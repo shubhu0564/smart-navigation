@@ -70,12 +70,14 @@ export default function HomePage() {
         type="button"
         onClick={openGoogleWeather}
         className="
-          w-full
+          flex
+          w-full max-w-xl
+          items-center
           rounded-[24px]
           border
           border-slate-200
           bg-white
-          p-4
+          px-4 py-3
           text-left
           shadow-sm
           transition-all
@@ -88,7 +90,7 @@ export default function HomePage() {
           focus:ring-teal-500/30
         "
       >
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex w-full items-center justify-between gap-4">
 
           {/* LEFT — AQI */}
           <div className="flex min-w-0 items-center gap-3">

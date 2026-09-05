@@ -8,6 +8,7 @@ import {
   Radio,
   Maximize2,
   Minimize2,
+  Layers,
 } from 'lucide-react'
 
 export default function FloatingActionBar({
@@ -17,6 +18,7 @@ export default function FloatingActionBar({
   onGoogleMaps,
   onFullscreen,
   onLiveGps,
+  onLegend,
   isFullscreen = false,
 }) {
   const handleClick = (event, callback) => {
@@ -70,8 +72,8 @@ export default function FloatingActionBar({
             }
             className="
               flex
-              h-10
-              w-10
+              h-8
+              w-8
               shrink-0
               items-center
               justify-center
@@ -116,8 +118,8 @@ export default function FloatingActionBar({
               }
               className="
                 flex
-                h-10
-                w-10
+                h-8
+                w-8
                 shrink-0
                 items-center
                 justify-center
@@ -154,8 +156,8 @@ export default function FloatingActionBar({
               }
               className="
                 flex
-                h-10
-                w-10
+                h-8
+                w-8
                 shrink-0
                 items-center
                 justify-center
@@ -191,8 +193,8 @@ export default function FloatingActionBar({
               }
               className="
                 flex
-                h-10
-                w-10
+                h-8
+                w-8
                 shrink-0
                 items-center
                 justify-center
@@ -229,8 +231,8 @@ export default function FloatingActionBar({
               }
               className="
                 flex
-                h-10
-                w-10
+                h-8
+                w-8
                 shrink-0
                 items-center
                 justify-center
@@ -267,8 +269,8 @@ export default function FloatingActionBar({
               }
               className="
                 flex
-                h-10
-                w-10
+                h-8
+                w-8
                 shrink-0
                 items-center
                 justify-center
@@ -298,6 +300,19 @@ export default function FloatingActionBar({
             {/* EXIT FULLSCREEN */}
             <button
               type="button"
+              title="Legend"
+              aria-label="Legend"
+              onClick={(event) =>
+                handleClick(event, onLegend)
+              }
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-teal-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+            >
+              <Layers size={16} strokeWidth={2} />
+            </button>
+
+            {/* EXIT FULLSCREEN */}
+            <button
+              type="button"
               title="Exit Fullscreen"
               aria-label="Exit Fullscreen"
               onClick={(event) =>
@@ -305,8 +320,8 @@ export default function FloatingActionBar({
               }
               className="
                 flex
-                h-10
-                w-10
+                h-8
+                w-8
                 shrink-0
                 items-center
                 justify-center

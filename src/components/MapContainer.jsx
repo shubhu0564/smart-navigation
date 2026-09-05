@@ -60,6 +60,7 @@ export default function MapContainer() {
   const [fullscreenSearch, setFullscreenSearch] = useState('')
   const [showFullscreenSearch, setShowFullscreenSearch] = useState(false)
   const [showFullscreenSearchBar, setShowFullscreenSearchBar] = useState(true)
+  const [showEnhancedLegend, setShowEnhancedLegend] = useState(true)
   const [riverNallahData, setRiverNallahData] = useState(null)
   const fullscreenSearchRef = useRef(null)
 
@@ -479,7 +480,7 @@ export default function MapContainer() {
         properties.Name ??
         properties.name ??
         fallback,
-    ).trim()
+      ).replace(/\bRheja\b/gi, 'Raheja').trim()
   }
 
   const getMapSearchNumber = (feature) => {
@@ -1408,13 +1409,14 @@ export default function MapContainer() {
     clearRouting()
     mapRef.current?.closePopup()
 
-    const buildingName =
+    const buildingName = String(
       properties.bldg_namee ??
       properties.bldg_name ??
       properties.building_name ??
       properties.name ??
       properties.Name ??
-      'Unnamed Building'
+      'Unnamed Building',
+    ).replace(/\bRheja\b/gi, 'Raheja')
 
     const buildingNo =
       properties.bldg_no ??
@@ -2374,7 +2376,7 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
           {/* =========================================================
               ENHANCED MAP LEGEND
              ========================================================= */}
-          {isFullscreen && (
+          {isFullscreen && showEnhancedLegend && (
             <div
               className="pointer-events-none absolute right-2 bottom-28 z-[2200] w-[145px] rounded-xl border border-slate-200 bg-white/95 px-3 py-2.5 shadow-lg backdrop-blur-md sm:right-4 sm:top-4 sm:bottom-auto sm:w-[190px] sm:rounded-2xl sm:px-4 sm:py-3"
             >
@@ -2384,18 +2386,13 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
 
               <div className="space-y-1.5 text-[10px] font-medium text-slate-700 sm:space-y-2.5 sm:text-xs">
                 <div className="flex items-center gap-2 sm:gap-3">
-                  <span className="block h-3 w-3 rounded-full border-2 border-red-600 bg-transparent" />
+                  <span className="block h-[3px] w-7 bg-red-600" />
                   <span>Site Boundary</span>
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-3">
-                  <span className="block h-3 w-3 rounded-sm border border-slate-700 bg-slate-300" />
-                  <span>Buildings</span>
-                </div>
-
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <span className="block h-[3px] w-7 bg-slate-500" />
-                  <span>Roads</span>
+                  <span className="block h-3 w-3 rounded-sm bg-black" />
+                  <span>Building</span>
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -2405,7 +2402,7 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
 
                 <div className="flex items-center gap-2 sm:gap-3">
                   <span className="block h-[4px] w-7 rounded-full bg-blue-600" />
-                  <span>River / Nallah</span>
+                  <span>Nallah</span>
                 </div>
               </div>
             </div>
@@ -2455,7 +2452,7 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
             ]}
             zoom={16}
             scrollWheelZoom={false}
-            dragging={isFullscreen}
+            dragging={true}
             touchZoom={isFullscreen}
             doubleClickZoom={false}
             zoomControl={!isFullscreen}
@@ -2520,9 +2517,9 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
                 ================================================= */}
             {openSpacesInSite && (
               <GeoJSON
-                key="open-spaces-noninteractive"
+                key="open-spaces-display"
                 data={openSpacesInSite}
-                interactive={false}
+                interactive={true}
                 style={() => ({
                   color: '#16a34a',
                   weight: 1.5,
@@ -2530,6 +2527,20 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
                   fillColor: '#d1fae5',
                   fillOpacity: 0.8,
                 })}
+                onEachFeature={(feature, layer) => {
+                  const properties = feature?.properties || {}
+                  const name = String(
+                    properties.Name ?? properties.name ?? '',
+                  ).trim()
+                  const isPlayground = String(
+                    properties['Park & Gr'] ?? properties.parkPlayground ?? '',
+                  ).trim().toLowerCase() === 'yes'
+
+                  layer.on('click', () => {
+                    const label = name || (isPlayground ? 'Playground' : 'Open Space')
+                    setToast({ en: label, mr: label })
+                  })
+                }}
               />
             )}
 
@@ -3067,6 +3078,10 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
             onFullscreen={
               toggleFullscreen
             }
+
+            onLegend={() => setShowEnhancedLegend((visible) => !visible)}
+
+            isFullscreen={isFullscreen}
 
             onLiveGps={
               focusOnCurrentLocation

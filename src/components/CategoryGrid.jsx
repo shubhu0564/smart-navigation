@@ -195,6 +195,8 @@ const ALIAS_MAP = {
     'kamla raheja vidyanidhi institute for architecture and environmental studies',
     'kamla raheja vidyanidhi institute for architecture environmental studies',
     'kamla raheja vidyanidhi',
+    'kamla rheja vidyanidhi institute for architecture and environmental studies',
+    'kamla rheja vidyanidhi',
     'krvia',
     'kamala raheja vidyamandir',
   ],
@@ -664,6 +666,21 @@ const [showCategoryPopup, setShowCategoryPopup] =
 
     if (canonical === 'busStop') {
       add(geoJson.busStops)
+    }
+
+    if (canonical === 'educationalInstitute') {
+      const educationBuildings = geoJson.clientBuildings
+        ? {
+            ...geoJson.clientBuildings,
+            features: geoJson.clientBuildings.features.filter((feature) =>
+              ['yes', 'true', '1'].includes(
+                String(feature?.properties?.Edu_Bldg ?? '').trim().toLowerCase(),
+              ),
+            ),
+          }
+        : null
+
+      add(educationBuildings)
     }
 
     if (canonical === 'park') {
