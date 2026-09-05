@@ -916,11 +916,10 @@ export default function MapContainer() {
     // The list remains below the map and no place is selected yet.
     if (
       selectedLandmark.sourceCategory === 'categoryGroup' &&
-      Array.isArray(selectedLandmark.categoryPlaces) &&
-      selectedLandmark.categoryPlaces.length > 0
+      Array.isArray(selectedLandmark.categoryFeatures) &&
+      selectedLandmark.categoryFeatures.length > 0
     ) {
-      const features = selectedLandmark.categoryPlaces
-        .map((place) => place?.feature)
+      const features = selectedLandmark.categoryFeatures
         .filter(Boolean)
 
       if (features.length > 0) {
@@ -951,8 +950,32 @@ export default function MapContainer() {
         selectedLandmark.fromCategory !== true
 
       // Category-list selection: focus the exact GIS feature.
-      // No Leaflet popup. The React red overlay handles highlighting.
+      // Bus stops are points, so always fly directly to the selected
+      // point. This prevents the map from retaining/focusing another
+      // bus stop from the previous selection.
       if (selectedLandmark.fromCategory === true) {
+        if (selectedLandmark.sourceCategory === 'busStop') {
+          const coordinates = feature?.geometry?.coordinates || []
+          const longitude = Number(coordinates[0])
+          const latitude = Number(coordinates[1])
+
+          if (
+            Number.isFinite(latitude) &&
+            Number.isFinite(longitude)
+          ) {
+            mapRef.current.flyTo(
+              [latitude, longitude],
+              19,
+              {
+                duration: 0.8,
+                animate: true,
+              },
+            )
+          }
+
+          return
+        }
+
         const featureLayer = L.geoJSON(feature)
         const bounds = featureLayer.getBounds()
 
@@ -2160,13 +2183,12 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
           {isFullscreen && showFullscreenSearchBar && (
               <div
                 ref={fullscreenSearchRef}
-                className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1/2 sm:right-auto sm:w-[min(420px,calc(100%-24px))] sm:-translate-x-1/2"
-                onClick={(event) => event.stopPropagation()}
+className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1/2 sm:right-auto sm:w-[min(420px,calc(100%-24px))] sm:-translate-x-1/2"
               onMouseDown={(event) => event.stopPropagation()}
               onTouchStart={(event) => event.stopPropagation()}
             >
               <div className="relative">
-                <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-md">
+<div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-md">
                   <Search size={16} className="shrink-0 text-slate-500" />
                   <input
                     type="text"
@@ -2190,7 +2212,7 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
                       }
                     }}
                     placeholder="Search place, number or category..."
-                    className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none placeholder:text-slate-400"
+                    className="w-full min-w-0 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
                   />
                   {fullscreenSearch && (
                     <button
@@ -2629,19 +2651,133 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
                 BUS STOPS
                ================================================= */}
 
-            {(selectedCategory === 'all' || selectedCategory === 'busStop' || enabledCategories.includes('busStop')) &&
-              busStopsInSite && (
-                <GeoJsonLayer
-  featureData={busStopsInSite}
-  layerKey="busStops"
-  showLabels={selectedCategory === 'busStop'}
-  onFeatureClick={handleBusStopClick}
-   activeFeatureId={
-     selectedLandmark?.sourceCategory === 'busStop'
-       ? selectedLandmark.id
-       : null
-   }
-/>
+            {/* =================================================
+                BUS STOPS — SINGLE, EXACT GEOJSON RENDERER
+
+                Fixes:
+                1. Uses only the supplied busStopsInSite GeoJSON.
+                2. No duplicate bus-stop renderer.
+                3. Map click uses the original feature.
+                4. Category-list selection uses the same original feature.
+                5. Selected stop is matched by its real GeoJSON id,
+                   with coordinate fallback.
+                6. Normal stops are blue; selected stop is red.
+                ================================================= */}
+
+            {(selectedCategory === 'all' ||
+              selectedCategory === 'busStop' ||
+              enabledCategories.includes('busStop')) &&
+              busStopsInSite?.features?.length > 0 && (
+                <GeoJSON
+                  /*
+                   * IMPORTANT:
+                   * When one bus stop is selected, render ONLY that
+                   * exact GeoJSON feature on the map.
+                   *
+                   * Before this fix, the complete busStopsInSite
+                   * collection stayed rendered and only one marker
+                   * changed to red. That made the selected result
+                   * appear together with the other bus stops.
+                   */
+                  key={
+                    selectedLandmark?.sourceCategory === 'busStop'
+                      ? `selected-bus-stop-${selectedLandmark.id || selectedLandmark.selectedPlaceKey || 'selected'}`
+                      : 'all-bus-stops'
+                  }
+                  data={(() => {
+                    const selectedFeature =
+                      selectedLandmark?.sourceCategory === 'busStop'
+                        ? selectedLandmark?.feature
+                        : null
+
+                    if (selectedFeature?.geometry) {
+                      return {
+                        type: 'FeatureCollection',
+                        features: [selectedFeature],
+                      }
+                    }
+
+                    return busStopsInSite
+                  })()}
+                  pointToLayer={(feature, latlng) => {
+                    const properties = feature?.properties || {}
+
+                    const featureId =
+                      properties.id ??
+                      properties.ID ??
+                      properties.stop_id ??
+                      properties.stopId ??
+                      null
+
+                    const coords = feature?.geometry?.coordinates || []
+                    const featureLng = Number(coords[0])
+                    const featureLat = Number(coords[1])
+
+                    const selectedFeature =
+                      selectedLandmark?.sourceCategory === 'busStop'
+                        ? selectedLandmark?.feature
+                        : null
+
+                    const selectedProperties =
+                      selectedFeature?.properties || {}
+
+                    const selectedId =
+                      selectedProperties.id ??
+                      selectedProperties.ID ??
+                      selectedProperties.stop_id ??
+                      selectedProperties.stopId ??
+                      null
+
+                    const selectedCoords =
+                      selectedFeature?.geometry?.coordinates || []
+
+                    const selectedLng = Number(selectedCoords[0])
+                    const selectedLat = Number(selectedCoords[1])
+
+                    const sameId =
+                      featureId != null &&
+                      selectedId != null &&
+                      String(featureId) === String(selectedId)
+
+                    const sameCoordinates =
+                      Number.isFinite(featureLat) &&
+                      Number.isFinite(featureLng) &&
+                      Number.isFinite(selectedLat) &&
+                      Number.isFinite(selectedLng) &&
+                      Math.abs(featureLat - selectedLat) < 0.0000001 &&
+                      Math.abs(featureLng - selectedLng) < 0.0000001
+
+                    /*
+                     * SELECTED BUS STOP = RED
+                     * Normal bus stops = BLUE.
+                     *
+                     * The supplied GeoJSON uses properties.id (1..6),
+                     * so the real GIS id is the primary match.
+                     * Coordinates are only the fallback.
+                     */
+                    const isSelectedBusStop =
+                      selectedLandmark?.sourceCategory === 'busStop' &&
+                      (sameId || sameCoordinates)
+
+                    return L.circleMarker(latlng, {
+                      radius: isSelectedBusStop ? 11 : 7,
+                      color: isSelectedBusStop ? '#991b1b' : '#1d4ed8',
+                      weight: isSelectedBusStop ? 3 : 2,
+                      opacity: 1,
+                      fillColor: isSelectedBusStop ? '#ef0000' : '#3b82f6',
+                      fillOpacity: 1,
+                      bubblingMouseEvents: false,
+                    })
+                  }}
+                  onEachFeature={(feature, layer) => {
+                    layer.on({
+                      click: (event) => {
+                        L.DomEvent.stopPropagation(event)
+                        handleBusStopClick(feature)
+                      },
+                    })
+                  }}
+                />
               )}
 
             {/* Landmark point markers are intentionally hidden. Building polygons are the clickable map features. */}
@@ -2653,14 +2789,13 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
                ================================================= */}
 
             {selectedLandmark?.sourceCategory === 'categoryGroup' &&
-              Array.isArray(selectedLandmark.categoryPlaces) && (
+              Array.isArray(selectedLandmark.categoryFeatures) &&
+              selectedLandmark.categoryFeatures.length > 0 && (
                 <GeoJSON
-                  key={`category-red-${selectedLandmark.category}-${selectedLandmark.categoryPlaces.length}`}
+                  key={`category-red-${selectedLandmark.category}-${selectedLandmark.categoryFeatures.length}`}
                   data={{
                     type: 'FeatureCollection',
-                    features: selectedLandmark.categoryPlaces
-                      .map((place) => place?.feature)
-                      .filter(Boolean),
+                    features: selectedLandmark.categoryFeatures.filter(Boolean),
                   }}
                   interactive={false}
                   style={() => ({
@@ -2695,27 +2830,54 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
                 selected bus-stop overlay above.
                ================================================= */}
 
+            {/* =========================================================
+                SELECTED LANDMARK / BUILDING / PARK
+                -----------------------------------
+                When a real GIS feature is selected:
+                - Polygon / MultiPolygon -> complete polygon becomes RED.
+                - Point -> selected point becomes RED.
+                - Previous selection is replaced automatically.
+                - Bus stops are excluded because their own layer controls
+                  their blue/red appearance.
+                ========================================================= */}
             {selectedLandmark?.feature?.geometry &&
               selectedLandmark.sourceCategory !== 'categoryGroup' &&
               selectedLandmark.sourceCategory !== 'busStop' && (
                 <GeoJSON
-                  key={`selected-red-${selectedLandmark.id || selectedLandmark.selectedPlaceKey || selectedLandmark.name}`}
+                  key={`selected-feature-red-${selectedLandmark.sourceCategory}-${selectedLandmark.id || selectedLandmark.selectedPlaceKey || selectedLandmark.name}`}
                   data={selectedLandmark.feature}
                   interactive={false}
-                  style={() => ({
-                    color: '#7f1d1d',
-                    weight: 4,
-                    opacity: 1,
-                    fillColor: '#dc2626',
-                    fillOpacity: 0.9,
-                  })}
+                  style={(feature) => {
+                    const geometryType = feature?.geometry?.type
+
+                    if (
+                      geometryType === 'Polygon' ||
+                      geometryType === 'MultiPolygon'
+                    ) {
+                      return {
+                        color: '#991b1b',
+                        weight: 4,
+                        opacity: 1,
+                        fillColor: '#ef0000',
+                        fillOpacity: 0.88,
+                      }
+                    }
+
+                    return {
+                      color: '#991b1b',
+                      weight: 3,
+                      opacity: 1,
+                      fillColor: '#ef0000',
+                      fillOpacity: 1,
+                    }
+                  }}
                   pointToLayer={(feature, latlng) =>
                     L.circleMarker(latlng, {
                       radius: 11,
-                      color: '#7f1d1d',
+                      color: '#991b1b',
                       weight: 3,
                       opacity: 1,
-                      fillColor: '#dc2626',
+                      fillColor: '#ef0000',
                       fillOpacity: 1,
                     })
                   }
@@ -2802,7 +2964,7 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
                 }}
                 className="pointer-events-auto absolute left-1/2 top-3 z-[2300] flex -translate-x-1/2 items-center gap-2 rounded-xl border border-slate-200 bg-white/95 px-4 py-2 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur-md transition hover:bg-white active:bg-slate-100"
               >
-                <Search size={15} className="text-slate-500" />
+                <Search size={14}className="text-slate-500" />
                 Search
               </button>
             )}
