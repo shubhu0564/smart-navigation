@@ -62,7 +62,7 @@ const styles = {
     color: '#0f766e',
     weight: 1,
     opacity: 1,
-    fillColor: '#0f766e',
+   fillColor: '#000000',
     fillOpacity: 0.9,
   },
 }
@@ -244,43 +244,16 @@ export default function GeoJsonLayer({
   }
 
   const pointToLayer = (feature, latlng) => {
-    // Bus stops: only the currently selected stop is red.
-    // All other bus stops always remain blue.
-    
-  if (layerKey === 'busStops') {
-  const props = feature?.properties || {}
-
-  const coordinates = feature?.geometry?.coordinates
-
-  const longitude = Number(coordinates?.[0])
-  const latitude = Number(coordinates?.[1])
-
-  const name =
-    props.Name ??
-    props.name ??
-    props.NAME ??
-    props.stop_name ??
-    props.stopName ??
-    'Bus Stop'
-
-  const busStopKey =
-    Number.isFinite(latitude) &&
-    Number.isFinite(longitude)
-      ? `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`
-      : ''
-
-  const isSelectedBusStop =
-    activeFeatureId != null &&
-    String(activeFeatureId) === String(busStopKey)
-
-  return L.circleMarker(latlng, {
-    radius: isSelectedBusStop ? 10 : 6,
-    color: isSelectedBusStop ? '#991b1b' : '#2563eb',
-    fillColor: isSelectedBusStop ? '#dc2626' : '#60a5fa',
-    fillOpacity: 0.95,
-    weight: isSelectedBusStop ? 3 : 2,
-  })
-}
+    // Bus stops use Leaflet's fixed default marker icon.
+    if (layerKey === 'busStops') {
+      return L.circleMarker(latlng, {
+        radius: 6,
+        color: '#2563eb',
+        fillColor: '#60a5fa',
+        fillOpacity: 0.95,
+        weight: 2,
+      })
+    }
 
     // Landmarks are not rendered as point icons in the main map.
     // Buildings are the primary clickable map features.
@@ -375,8 +348,8 @@ export default function GeoJsonLayer({
         { maxWidth: 300, closeButton: true }
       )
     } else if (layerKey === 'landmarks') {
-      // Landmark selection is handled by React state in MapContainer.
-      // Do not create a Leaflet popup here.
+      // Landmark details are handled by the React selection/status UI.
+      // Do not create a Leaflet popup for landmark clicks.
     } else if (feature?.properties?.name) {
       layer.bindPopup(
         renderPopupContent(feature),
@@ -391,10 +364,14 @@ export default function GeoJsonLayer({
       click: () => {
         // Building click is handled by MapContainer so it can add
         // the Google Maps button and select the building.
+        // Category selection is handled by React/MapContainer.
+        // Close any Leaflet popup instead of opening a second popup.
         if (
           layerKey === 'buildings' ||
           layerKey === 'clientBuildings' ||
-          layerKey === 'landmarks'
+          layerKey === 'landmarks' ||
+          layerKey === 'parkPlayground' ||
+          layerKey === 'busStops'
         ) {
           layer.closePopup?.()
         } else {

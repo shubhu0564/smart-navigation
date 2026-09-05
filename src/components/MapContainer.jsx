@@ -17,6 +17,7 @@ import {
   Route,
   Clock3,
   Search,
+  X,
 } from 'lucide-react'
 
 import { useNavigation } from '../hooks/useNavigation'
@@ -58,7 +59,9 @@ export default function MapContainer() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [fullscreenSearch, setFullscreenSearch] = useState('')
   const [showFullscreenSearch, setShowFullscreenSearch] = useState(false)
+  const [showFullscreenSearchBar, setShowFullscreenSearchBar] = useState(true)
   const [riverNallahData, setRiverNallahData] = useState(null)
+  const fullscreenSearchRef = useRef(null)
 
   // Keep search/click focus modest instead of jumping to an overly close zoom.
   const DETAIL_ZOOM = 17.5
@@ -1212,6 +1215,98 @@ export default function MapContainer() {
 
   /*
    * ==========================================================
+   * PARK / PLAYGROUND CLICK
+   * Click exact park polygon -> select -> zoom -> red overlay
+   * ==========================================================
+   */
+
+  const handleParkPlaygroundClick = (feature) => {
+    if (!feature) return
+
+    const properties = feature?.properties || {}
+    const destination = getFeatureLatLng(feature)
+
+    if (!destination || !mapRef.current) {
+      setToast({
+        en: 'Unable to determine park/playground location.',
+        mr: 'पार्क/मैदानाचे स्थान निश्चित करता आले नाही.',
+      })
+      return
+    }
+
+    clearRouting()
+    mapRef.current?.closePopup()
+
+    const parkName =
+      properties.name ??
+      properties.Name ??
+      properties.NAME ??
+      properties.park_name ??
+      properties.parkName ??
+      properties.playground ??
+      properties.landmarkName ??
+      'Park / Playground'
+
+    const parkId =
+      properties.id ??
+      properties.ID ??
+      properties.fid ??
+      properties.FID ??
+      `park-${destination.lat}-${destination.lng}`
+
+    setSelectedLandmark({
+      id: parkId,
+      name: parkName,
+      road: properties.road ?? properties.address ?? '',
+      category: 'Park / Playground',
+      sourceCategory: 'park',
+      latitude: destination.lat,
+      longitude: destination.lng,
+      description: parkName,
+      address: properties.address ?? properties.road ?? '',
+      image: null,
+      rating: 4.6,
+      steps: [],
+      feature,
+      fromSearch: false,
+      fromCategory: false,
+    })
+
+    // Zoom to the COMPLETE clicked polygon, not only its centroid.
+    try {
+      const featureLayer = L.geoJSON(feature)
+      const bounds = featureLayer.getBounds()
+
+      if (bounds.isValid()) {
+        mapRef.current.fitBounds(bounds, {
+          padding: [60, 60],
+          maxZoom: DETAIL_ZOOM,
+          animate: true,
+        })
+      } else {
+        mapRef.current.flyTo(
+          [destination.lat, destination.lng],
+          DETAIL_ZOOM,
+          { duration: 0.8 },
+        )
+      }
+    } catch (error) {
+      console.error('Unable to focus selected park/playground:', error)
+      mapRef.current.flyTo(
+        [destination.lat, destination.lng],
+        DETAIL_ZOOM,
+        { duration: 0.8 },
+      )
+    }
+
+    setToast({
+      en: `${parkName} selected`,
+      mr: `${parkName} निवडले`,
+    })
+  }
+
+  /*
+   * ==========================================================
    * BUILDING CLICK
    * ==========================================================
    */
@@ -1808,12 +1903,46 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
     }
 
   useEffect(() => {
+    if (!isFullscreen) return
+
+    const handleOutsideSearchPointer = (event) => {
+      if (
+        fullscreenSearchRef.current &&
+        !fullscreenSearchRef.current.contains(event.target)
+      ) {
+        setShowFullscreenSearchBar(false)
+        setShowFullscreenSearch(false)
+      }
+    }
+
+    document.addEventListener(
+      'pointerdown',
+      handleOutsideSearchPointer,
+      true,
+    )
+
+    return () => {
+      document.removeEventListener(
+        'pointerdown',
+        handleOutsideSearchPointer,
+        true,
+      )
+    }
+  }, [isFullscreen])
+
+  useEffect(() => {
     const handleFullscreenChange = () => {
       const active =
         document.fullscreenElement ===
         mapWrapperRef.current
 
       setIsFullscreen(active)
+      setShowFullscreenSearchBar(active)
+      setShowFullscreenSearch(false)
+
+      if (!active) {
+        setFullscreenSearch('')
+      }
 
       // Wait for the browser to apply the new fullscreen
       // dimensions before asking Leaflet to recalculate.
@@ -2028,16 +2157,17 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
               ENHANCED MAP SEARCH
               Visible only in browser fullscreen mode.
              ========================================================= */}
-          {isFullscreen && (
-            <div
-              className="pointer-events-auto absolute left-4 right-4 top-4 z-[2300] sm:left-1/2 sm:right-auto sm:w-[min(680px,calc(100%-32px))] sm:-translate-x-1/2"
-              onClick={(event) => event.stopPropagation()}
+          {isFullscreen && showFullscreenSearchBar && (
+              <div
+                ref={fullscreenSearchRef}
+                className="pointer-events-auto absolute left-3 right-3 top-3 z-[2300] sm:left-1/2 sm:right-auto sm:w-[min(420px,calc(100%-24px))] sm:-translate-x-1/2"
+                onClick={(event) => event.stopPropagation()}
               onMouseDown={(event) => event.stopPropagation()}
               onTouchStart={(event) => event.stopPropagation()}
             >
               <div className="relative">
-                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-md">
-                  <Search size={19} className="shrink-0 text-slate-500" />
+                <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-md">
+                  <Search size={16} className="shrink-0 text-slate-500" />
                   <input
                     type="text"
                     value={fullscreenSearch}
@@ -2060,13 +2190,29 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
                       }
                     }}
                     placeholder="Search place, number or category..."
-                    className="w-full bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
+                    className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none placeholder:text-slate-400"
                   />
+                  {fullscreenSearch && (
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      title="Clear search"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setFullscreenSearch('')
+                        setShowFullscreenSearch(true)
+                      }}
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    >
+                      <X size={14} strokeWidth={2.5} />
+                    </button>
+                  )}
                 </div>
 
                 {showFullscreenSearch && (
                   <div
-                    className="mt-2 max-h-[360px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                    className="mt-1.5 max-h-[280px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl"
                     onClick={(event) => event.stopPropagation()}
                     onMouseDown={(event) => event.stopPropagation()}
                     onTouchStart={(event) => event.stopPropagation()}
@@ -2221,11 +2367,11 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
               center.lng,
             ]}
             zoom={16}
-            scrollWheelZoom={isFullscreen}
+            scrollWheelZoom={false}
             dragging={isFullscreen}
             touchZoom={isFullscreen}
-            doubleClickZoom={isFullscreen}
-            zoomControl={true}
+            doubleClickZoom={false}
+            zoomControl={!isFullscreen}
             className="gis-map-black-white h-full w-full"
             whenCreated={(map) => {
               mapRef.current = map
@@ -2313,11 +2459,15 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
   />
 )}
 
-{/* PLAYGROUND / PARK */}
+{/* =================================================
+    PLAYGROUND / PARK
+    CLICK -> ZOOM -> FULL POLYGON RED
+   ================================================= */}
 {parkPlaygroundInSite && (
   <GeoJsonLayer
     featureData={parkPlaygroundInSite}
     layerKey="parkPlayground"
+    onFeatureClick={handleParkPlaygroundClick}
   />
 )}
 
@@ -2613,6 +2763,24 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
                   opacity: 0.9,
                 }}
               />
+            )}
+
+            {isFullscreen && !showFullscreenSearchBar && (
+              <button
+                type="button"
+                aria-label="Open map search"
+                title="Search"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setShowFullscreenSearchBar(true)
+                  setShowFullscreenSearch(false)
+                }}
+                className="pointer-events-auto absolute left-1/2 top-3 z-[2300] flex -translate-x-1/2 items-center gap-2 rounded-xl border border-slate-200 bg-white/95 px-4 py-2 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur-md transition hover:bg-white active:bg-slate-100"
+              >
+                <Search size={15} className="text-slate-500" />
+                Search
+              </button>
             )}
 
           </LeafletMap>
