@@ -138,13 +138,6 @@ const PLACE_DEFINITIONS = {
     },
   ],
 
-  communityCenter: [
-    {
-      name: 'Juhu Club Millennium',
-      number: 1,
-    },
-  ],
-
   governmentBuilding: [
     {
       name: 'Goa Bhavan',
@@ -407,15 +400,6 @@ const canonicalCategoryId = (id) => {
 
   if (
     [
-      'communitycenter',
-      'community',
-    ].includes(value)
-  ) {
-    return 'communityCenter'
-  }
-
-  if (
-    [
       'governmentbuilding',
       'government',
       'govbuilding',
@@ -528,21 +512,6 @@ const [showCategoryPopup, setShowCategoryPopup] =
           icon: 'School',
           count:
             PLACE_DEFINITIONS.educationalInstitute
-              .length,
-        },
-      ),
-
-      findCategory(
-        ['communityCenter'],
-        {
-          id: 'communityCenter',
-          label: {
-            en: 'Community Center',
-            mr: 'सामुदायिक केंद्र',
-          },
-          icon: 'Users',
-          count:
-            PLACE_DEFINITIONS.communityCenter
               .length,
         },
       ),
@@ -1068,7 +1037,7 @@ const [showCategoryPopup, setShowCategoryPopup] =
                     event.stopPropagation()
                   }}
                   style={{ touchAction: 'manipulation' }}
-                  className={`rounded-[16px] border p-2 text-left shadow-sm transition duration-200 sm:rounded-[24px] sm:p-4 ${
+                  className={`${canonicalCategoryId(category.id) === 'landmark' ? 'col-span-2 flex flex-col items-center md:col-span-2 lg:col-span-2 xl:col-span-2' : ''} rounded-[16px] border p-2 text-left shadow-sm transition duration-200 sm:rounded-[24px] sm:p-4 ${
                     active
                       ? 'border-teal-600 bg-teal-600 text-white shadow-lg'
                       : darkMode
@@ -1089,7 +1058,11 @@ const [showCategoryPopup, setShowCategoryPopup] =
                     />
                   </div>
 
-                  <div className="flex items-center gap-1 sm:gap-2">
+                  <div className={`flex items-center gap-1 sm:gap-2 ${
+                    canonicalCategoryId(category.id) === 'landmark'
+                      ? 'justify-center'
+                      : ''
+                  }`}>
                     <p className="text-xs font-semibold leading-4 sm:text-sm sm:leading-5">
                       {getText(
                         category.label,
