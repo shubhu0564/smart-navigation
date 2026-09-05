@@ -2160,7 +2160,7 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
           {isFullscreen && showFullscreenSearchBar && (
               <div
                 ref={fullscreenSearchRef}
-                className="pointer-events-auto absolute left-3 right-3 top-3 z-[2300] sm:left-1/2 sm:right-auto sm:w-[min(420px,calc(100%-24px))] sm:-translate-x-1/2"
+                className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1/2 sm:right-auto sm:w-[min(420px,calc(100%-24px))] sm:-translate-x-1/2"
                 onClick={(event) => event.stopPropagation()}
               onMouseDown={(event) => event.stopPropagation()}
               onTouchStart={(event) => event.stopPropagation()}
@@ -2290,33 +2290,35 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
               ENHANCED MAP LEGEND
              ========================================================= */}
           {isFullscreen && (
-            <div className="pointer-events-none absolute right-4 top-20 z-[2200] w-[190px] rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-md sm:top-4">
-              <div className="mb-3 text-sm font-bold text-slate-800">
+            <div
+              className="pointer-events-none absolute right-2 bottom-28 z-[2200] w-[145px] rounded-xl border border-slate-200 bg-white/95 px-3 py-2.5 shadow-lg backdrop-blur-md sm:right-4 sm:top-4 sm:bottom-auto sm:w-[190px] sm:rounded-2xl sm:px-4 sm:py-3"
+            >
+              <div className="mb-2 text-xs font-bold text-slate-800 sm:mb-3 sm:text-sm">
                 JVPD GIS LAYERS
               </div>
 
-              <div className="space-y-2.5 text-xs font-medium text-slate-700">
-                <div className="flex items-center gap-3">
+              <div className="space-y-1.5 text-[10px] font-medium text-slate-700 sm:space-y-2.5 sm:text-xs">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <span className="block h-3 w-3 rounded-full border-2 border-red-600 bg-transparent" />
                   <span>Site Boundary</span>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <span className="block h-3 w-3 rounded-sm border border-slate-700 bg-slate-300" />
                   <span>Buildings</span>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <span className="block h-[3px] w-7 bg-slate-500" />
                   <span>Roads</span>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <span className="block h-3 w-3 rounded-sm border border-green-600 bg-green-100" />
                   <span>Open Space</span>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <span className="block h-[4px] w-7 rounded-full bg-blue-600" />
                   <span>River / Nallah</span>
                 </div>
@@ -2420,6 +2422,28 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
                   opacity: 0.9,
                   lineCap: 'round',
                   lineJoin: 'round',
+                })}
+              />
+            )}
+
+            {/* =================================================
+                 OPEN SPACES — DISPLAY ONLY
+
+                 Open-space polygons are intentionally NON-INTERACTIVE.
+                 They cannot be selected, clicked, zoomed, or highlighted.
+                 Only the Park / Playground layer below is selectable.
+                ================================================= */}
+            {openSpacesInSite && (
+              <GeoJSON
+                key="open-spaces-noninteractive"
+                data={openSpacesInSite}
+                interactive={false}
+                style={() => ({
+                  color: '#16a34a',
+                  weight: 1.5,
+                  opacity: 1,
+                  fillColor: '#d1fae5',
+                  fillOpacity: 0.8,
                 })}
               />
             )}
