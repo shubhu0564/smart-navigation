@@ -346,6 +346,8 @@ const featureNumber = (feature) => {
     p.number ??
     p.stop_no ??
     p.stopNo ??
+    p.id ??
+    p.ID ??
     ''
   )
 }
@@ -441,7 +443,8 @@ export default function CategoryGrid({
 
   const [openCategoryId, setOpenCategoryId] =
     useState(null)
-
+const [showCategoryPopup, setShowCategoryPopup] =
+  useState(false)
   /*
    * ==========================================================
    * FIND CATEGORY
@@ -611,6 +614,91 @@ export default function CategoryGrid({
    * and then safely falls back to the other available feature layers.
    */
 
+  /* VERIFIED CORPORATION LANDMARK GEOMETRY
+   * Uses only exact verified names from the old client_buildings GeoJSON.
+   * No building-number fallback is used.
+   */
+  const getVerifiedCorporationLandmarks = () => {
+    const source = geoJson?.clientBuildings
+    if (!source || !Array.isArray(source.features)) {
+      return { type: 'FeatureCollection', features: [] }
+    }
+
+    const official = {
+      4: 'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
+      7: 'Smt SB Aarya Vidya Mandir',
+      9: 'Ecole Mondiale World School',
+      10: 'Gujarath Bhavan',
+      11: 'Goa Bhavan',
+      12: 'CDAC – Centre For Development of Advance Computing',
+      14: 'Juhu Club Millennium',
+      15: 'Shree Kalimata Temple',
+    }
+
+    const aliases = {
+      'kamla raheja vidyanidhi institute for architecture environmental studies': 4,
+      'kamla raheja vidyanidhi': 4,
+      'krvia': 4,
+      'smt sb aarya vidya mandir': 7,
+      'sb aarya vidya mandir': 7,
+      'aarya vidya mandir': 7,
+      'ecole mondiale world school': 9,
+      'ecole mondiale': 9,
+      'gujarath bhavan': 10,
+      'gujarat bhavan': 10,
+      'goa bhavan': 11,
+      'cdac': 12,
+      'centre for development of advance computing': 12,
+      'centre for development of advanced computing': 12,
+      'juhu club millennium': 14,
+      'juhu club': 14,
+      'shree kalimata temple': 15,
+      'kalimata temple': 15,
+    }
+
+    const normalize = (value) =>
+      String(value ?? '')
+        .toLowerCase()
+        .replace(/&/g, ' and ')
+        .replace(/[–—-]/g, ' ')
+        .replace(/[^a-z0-9 ]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+
+    const features = []
+    source.features.forEach((feature) => {
+      const props = feature?.properties || {}
+      const name = normalize(
+        props.bldg_namee ?? props.bldg_name ??
+        props.building_name ?? props.name ?? props.Name ?? ''
+      )
+      const landmarkNo = aliases[name]
+      if (!landmarkNo || !official[landmarkNo]) return
+
+      features.push({
+        ...feature,
+        properties: {
+          ...props,
+          id: `corporation-landmark-${landmarkNo}`,
+          landmarkNo,
+          landmarkName: official[landmarkNo],
+          name: official[landmarkNo],
+          category: 'corporationLandmark',
+          categoryLabel: 'Corporation Landmark',
+        },
+      })
+    })
+
+    const unique = Array.from(
+      new Map(features.map((feature) => [feature.properties.landmarkNo, feature])).values()
+    )
+    const result = { type: 'FeatureCollection', features: unique }
+
+    return geoJson?.siteBoundary
+      ? filterGeoJsonBySite(result, geoJson.siteBoundary)
+      : result
+  }
+
   const getFeatureCollectionsForCategory = (category) => {
     const canonical = canonicalCategoryId(category)
     const collections = []
@@ -629,8 +717,13 @@ export default function CategoryGrid({
       add(geoJson.openSpaces)
     }
 
-    // Buildings are the authoritative source for the named civic
-    // landmarks and institutions in the client list.
+    // Verified corporation landmarks use the actual polygons from
+    // the old client_buildings GeoJSON first.
+    if (canonical === 'landmark') {
+      add(getVerifiedCorporationLandmarks())
+    }
+
+    // Generic buildings remain a fallback for other named places.
     add(geoJson.clientBuildings)
 
     // Keep the existing landmark collection as a fallback because it
@@ -674,197 +767,71 @@ export default function CategoryGrid({
     })
   }
 
-const findFeatureForName = (category, name, number = null) => {
-  const canonical = canonicalCategoryId(category)
-  const aliases = aliasesFor(name)
-  const collections = getFeatureCollectionsForCategory(canonical)
-
-  /*
-   * ============================================================
-   * LANDMARK FIX
-   * ============================================================
-   *
-   * IMPORTANT:
-   * The new client GIS stores landmark features with:
-   *
-   *   Landmarks: "yes"
-   *   bldg_no: 0
-   *
-   * Therefore NEVER use bldg_no / landmark number to find
-   * a landmark.
-   *
-   * The landmark must be matched using its actual GIS name.
-   */
-
-  if (canonical === 'landmark') {
-    const clientBuildings = geoJson?.clientBuildings
-
-    if (!clientBuildings?.features?.length) {
-      console.warn(
-        '[CategoryGrid] clientBuildings GIS is missing for landmark:',
-        name,
-      )
-
-      return null
-    }
-
-    const landmarkFeatures =
-      clientBuildings.features.filter((feature) => {
-        const properties = feature?.properties || {}
-
-        return (
-          String(properties.Landmarks || '')
-            .trim()
-            .toLowerCase() === 'yes'
-        )
-      })
+  const findFeatureForName = (category, name, number = null) => {
+    const aliases = aliasesFor(name)
+    const collections = getFeatureCollectionsForCategory(category)
 
     /*
-     * First try an exact/alias name match.
-     */
-    const exactLandmark = landmarkFeatures.find((feature) => {
-      const currentName = normalise(
-        feature?.properties?.bldg_namee ??
-          feature?.properties?.bldg_name ??
-          feature?.properties?.building_name ??
-          '',
-      )
-
-      if (!currentName) return false
-
-      return aliases.some(
-        (alias) => currentName === alias,
-      )
-    })
-
-    if (exactLandmark) {
-      return exactLandmark
-    }
-
-    /*
-     * Second try the controlled alias matching.
-     */
-    const aliasLandmark = landmarkFeatures.find((feature) => {
-      const currentName = normalise(
-        feature?.properties?.bldg_namee ??
-          feature?.properties?.bldg_name ??
-          feature?.properties?.building_name ??
-          '',
-      )
-
-      if (!currentName) return false
-
-      return aliases.some((alias) => {
-        if (!alias) return false
-
-        const currentWords = currentName.split(' ')
-        const aliasWords = alias.split(' ')
-
-        const currentSet = new Set(currentWords)
-
-        const commonWords = aliasWords.filter(
-          (word) => currentSet.has(word),
-        )
-
-        return (
-          commonWords.length >=
-          Math.min(2, aliasWords.length)
-        )
-      })
-    })
-
-    if (aliasLandmark) {
-      return aliasLandmark
-    }
-
-    /*
-     * VERY IMPORTANT:
+     * BUS STOP FIX:
+     * The stop number is the authoritative identifier for the
+     * supplied bus-stop GeoJSON. Match it BEFORE name aliases.
      *
-     * Do NOT fall back to bldg_no for landmarks.
-     *
-     * If the new GIS does not contain this landmark,
-     * return null instead of selecting a wrong building.
+     * This prevents selecting Stop B while the map focuses on Stop A
+     * when names/aliases are similar.
      */
+    if (
+      canonicalCategoryId(category) === 'busStop' &&
+      number !== null &&
+      number !== undefined
+    ) {
+      const targetNumber = String(number).trim()
 
-    console.warn(
-      '[CategoryGrid] Landmark not found in NEW GIS:',
-      {
-        requestedName: name,
-        aliases,
-        availableLandmarks:
-          landmarkFeatures.map(
-            (feature) =>
-              feature?.properties?.bldg_namee,
-          ),
-      },
-    )
+      if (targetNumber) {
+        const busStopCollection = collections[0]
+
+        const numberMatch = busStopCollection?.features?.find((feature) => {
+          const currentNumber = String(featureNumber(feature)).trim()
+          return currentNumber === targetNumber
+        })
+
+        if (numberMatch) return numberMatch
+      }
+    }
+
+    // Normal categories continue with exact/strong name matching.
+    for (const collection of collections) {
+      const match = collection.features.find((feature) =>
+        featureMatchesName(feature, aliases),
+      )
+      if (match) return match
+    }
+
+    // Number fallback for categories other than bus stops.
+    if (number !== null && number !== undefined) {
+      const targetNumber = String(number).trim()
+
+      if (targetNumber) {
+        let numberCollections = collections
+
+        if (canonicalCategoryId(category) === 'busStop') {
+          numberCollections = collections.slice(0, 1)
+        } else if (canonicalCategoryId(category) === 'park') {
+          numberCollections = collections.slice(0, 2)
+        }
+
+        for (const collection of numberCollections) {
+          const match = collection.features.find((feature) => {
+            const currentNumber = String(featureNumber(feature)).trim()
+            return currentNumber === targetNumber
+          })
+          if (match) return match
+        }
+      }
+    }
 
     return null
   }
 
-  /*
-   * ============================================================
-   * OTHER CATEGORIES
-   * ============================================================
-   */
-
-  /*
-   * First: exact/strong name matching.
-   */
-  for (const collection of collections) {
-    const match = collection.features.find(
-      (feature) =>
-        featureMatchesName(feature, aliases),
-    )
-
-    if (match) {
-      return match
-    }
-  }
-
-  /*
-   * Number fallback is allowed ONLY for categories where
-   * the number belongs to that category's GIS layer.
-   */
-  if (
-    number !== null &&
-    number !== undefined
-  ) {
-    const targetNumber = String(number).trim()
-
-    if (targetNumber) {
-      let numberCollections = collections
-
-      if (
-        canonical === 'busStop'
-      ) {
-        numberCollections = collections.slice(0, 1)
-      } else if (
-        canonical === 'park'
-      ) {
-        numberCollections = collections.slice(0, 2)
-      }
-
-      for (const collection of numberCollections) {
-        const match = collection.features.find(
-          (feature) => {
-            const currentNumber = String(
-              featureNumber(feature),
-            ).trim()
-
-            return currentNumber === targetNumber
-          },
-        )
-
-        if (match) {
-          return match
-        }
-      }
-    }
-  }
-
-  return null
-}
   const findBuildingFeatureForName = (name, number = null) =>
     findFeatureForName('landmark', name, number)
 
@@ -877,118 +844,30 @@ const findFeatureForName = (category, name, number = null) => {
    * ==========================================================
    */
 
- const getPlacesForCategory = (categoryId) => {
-  const canonical = canonicalCategoryId(categoryId)
+  const getPlacesForCategory = (categoryId) => {
+    const canonical = canonicalCategoryId(categoryId)
+    const definitions = PLACE_DEFINITIONS[canonical] || []
 
-  // ============================================================
-  // LANDMARKS
-  // ============================================================
-  // The NEW client GIS is the source of truth.
-  // Only features explicitly marked Landmarks = yes/true/1
-  // are shown as landmarks.
-  // ============================================================
-
-  if (canonical === 'landmark') {
-    const features =
-      geoJson?.clientBuildings?.features ?? []
-
-    const landmarkFeatures = features.filter((feature) => {
-      const properties = feature?.properties ?? {}
-
-      return ['yes', 'true', '1'].includes(
-        String(
-          properties.Landmarks ??
-            properties.landmarks ??
-            '',
-        )
-          .trim()
-          .toLowerCase(),
-      )
-    })
-
-    return landmarkFeatures.map((feature, index) => {
-      const properties = feature?.properties ?? {}
-
-      const name =
-        properties.bldg_namee ??
-        properties.bldg_name ??
-        properties.building_name ??
-        properties.name ??
-        properties.Name ??
-        `Landmark ${index + 1}`
-
-      const number =
-        properties.landmarkNo ??
-        properties.landmark_no ??
-        ''
-
-      return {
-        id:
-          properties.fid_1 ??
-          properties.fid ??
-          properties.id ??
-          `gis-landmark-${index}`,
-
-        name,
-
-        number:
-          number !== ''
-            ? String(number)
-            : String(index + 1),
-
-        feature,
-
-        index,
-
-        sourceCategory: 'landmark',
-
-        road:
-          properties.road ??
-          properties.address ??
-          '',
-
-        category: 'landmark',
-      }
-    })
-  }
-
-  // ============================================================
-  // ALL OTHER CATEGORIES
-  // ============================================================
-
-  const definitions =
-    PLACE_DEFINITIONS[canonical] || []
-
-  return definitions
-    .map((place, index) => {
+    return definitions.map((place, index) => {
       const feature = findFeatureForName(
         canonical,
         place.name,
         place.number,
       )
 
-      if (!feature) {
-        return null
-      }
-
-      const actualNumber =
-        featureNumber(feature)
+      const actualNumber = feature
+        ? featureNumber(feature)
+        : place.number
 
       return {
         ...place,
-
-        number:
-          actualNumber || place.number,
-
+        number: actualNumber || place.number,
         feature,
-
         index,
-
         sourceCategory: canonical,
       }
     })
-    .filter(Boolean)
-}
+  }
 
   /*
    * ==========================================================
@@ -1035,7 +914,15 @@ const findFeatureForName = (category, name, number = null) => {
     const selected = {
       // Unique ID prevents A and B from sharing active state.
       id:
-        `category-${canonical}-${index}-${normalise(place?.name || '')}`,
+        isBusStop
+          ? (
+              properties.id ??
+              properties.ID ??
+              properties.stop_id ??
+              properties.stopId ??
+              `busStop:${stopNo}:${index}`
+            )
+          : `category-${canonical}-${index}-${normalise(place?.name || '')}`,
       name: place.name,
       road: properties.road ?? properties.address ?? '',
       category: canonical,
@@ -1059,7 +946,7 @@ const findFeatureForName = (category, name, number = null) => {
       fromSearch: false,
       fromCategory: true,
       categoryId: canonical,
-      categoryPlaces: openPlaces,
+      categoryPlaces: [],
       selectedPlaceIndex: index,
       selectedPlaceKey:
         `${canonical}:${index}:${normalise(place.name || '')}`,
@@ -1078,31 +965,33 @@ const findFeatureForName = (category, name, number = null) => {
 
   const handleCategoryClick = (category) => {
     const canonical = canonicalCategoryId(category.id)
-    const isSameCategory =
-      canonicalCategoryId(selectedCategory) === canonical
-
-    if (isSameCategory) {
-      setSelectedCategory('all')
-      setOpenCategoryId(null)
-      setSelectedLandmark(null)
-      return
-    }
-
-    // Build the complete category list once. The map receives the
-    // same real GIS features, so the list and red map highlight
-    // always refer to the exact same places.
-    const places = getPlacesForCategory(canonical)
+    const places = getPlacesForCategory(category.id)
+    const features = places
+      .map((place) => place?.feature)
+      .filter(Boolean)
 
     setSelectedCategory(category.id)
     setOpenCategoryId(category.id)
+    setShowCategoryPopup(false)
+
+    // Selecting a category focuses and highlights the real GIS features
+    // for that category. No white category page/popup is opened.
     setSelectedLandmark({
       id: `category-group-${canonical}`,
-      name: category.label?.en || category.id,
+      name: getText(category.label, language),
       category: canonical,
-      sourceCategory: 'categoryGroup',
       categoryId: canonical,
-      categoryPlaces: places,
+      sourceCategory: 'categoryGroup',
+      latitude: null,
+      longitude: null,
+      description: getText(category.label, language),
+      address: '',
+      image: null,
+      rating: 4.6,
+      steps: [],
       feature: null,
+      categoryPlaces: [],
+      categoryFeatures: features,
       fromSearch: false,
       fromCategory: false,
     })
@@ -1225,8 +1114,269 @@ const findFeatureForName = (category, name, number = null) => {
         </div>
       ) : null}
 
-      {/* Category places are rendered below the map by MapContainer. */}
+     {/* =====================================================
+    CATEGORY PLACES POPUP
+   ===================================================== */}
 
+{showPlacesList &&
+  showCategoryPopup &&
+  listCategoryId && (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 px-4 py-6"
+      onClick={() => setShowCategoryPopup(false)}
+    >
+      <div
+        className={`relative w-full max-w-lg overflow-hidden rounded-[24px] border shadow-2xl ${
+          darkMode
+            ? 'border-slate-700 bg-slate-900'
+            : 'border-slate-200 bg-white'
+        }`}
+        onClick={(event) => event.stopPropagation()}
+      >
+
+        {/* HEADER */}
+        <div
+          className={`flex items-center justify-between border-b px-5 py-4 ${
+            darkMode
+              ? 'border-slate-700'
+              : 'border-slate-200'
+          }`}
+        >
+          <div>
+            <p
+              className={`text-base font-bold ${
+                darkMode
+                  ? 'text-white'
+                  : 'text-slate-900'
+              }`}
+            >
+              {getText(
+                orderedCategories.find(
+                  (item) =>
+                    canonicalCategoryId(item.id) ===
+                    canonicalCategoryId(listCategoryId)
+                )?.label || {
+                  en: 'Places',
+                  mr: 'ठिकाणे',
+                },
+                language
+              )}
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Select a place to locate it on the map.
+            </p>
+          </div>
+
+          {/* CLOSE */}
+          <button
+            type="button"
+            onClick={() =>
+              setShowCategoryPopup(false)
+            }
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100"
+          >
+            <Icons.X size={18} />
+          </button>
+        </div>
+
+        {/* COUNT */}
+        <div className="border-b border-slate-100 px-5 py-3">
+          <span className="inline-flex rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">
+            {openPlaces.length} places
+          </span>
+        </div>
+
+        {/* PLACES */}
+        <div className="max-h-[65vh] overflow-y-auto">
+
+          {openPlaces.length === 0 ? (
+            <div className="px-5 py-8 text-center text-sm text-slate-500">
+              No places are available for this category.
+            </div>
+          ) : (
+            openPlaces.map((place, index) => (
+              <button
+                type="button"
+                key={`${listCategoryId}-${place.name}-${index}`}
+                onClick={() => {
+                  selectPlace(
+                    listCategoryId,
+                    place,
+                    index
+                  )
+
+                  setShowCategoryPopup(false)
+                }}
+                className="flex w-full items-center gap-3 border-b border-slate-100 px-5 py-4 text-left transition hover:bg-teal-50"
+              >
+
+                {/* NUMBER */}
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-sm font-bold text-teal-700">
+                  {String.fromCharCode(97 + index)}.
+                </span>
+
+                {/* NAME */}
+                <div className="min-w-0 flex-1">
+
+                  <p className="whitespace-normal break-words text-sm font-semibold leading-5 text-slate-900">
+                    {place.name}
+                  </p>
+
+                  {String(
+                    place.number ?? ''
+                  ).trim() ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      No: {place.number}
+                    </p>
+                  ) : null}
+
+                  {!place.feature ? (
+                    <p className="mt-1 text-xs font-medium text-amber-600">
+                      Location data unavailable
+                    </p>
+                  ) : null}
+
+                </div>
+
+                <Icons.ChevronRight
+                  size={18}
+                  className="shrink-0 text-slate-400"
+                />
+
+              </button>
+            ))
+          )}
+
+        </div>
+
+      </div>
+    </div>
+  )}
+      {showPlacesList &&
+        listCategoryId && (
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 6,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            className={`overflow-hidden rounded-[22px] border shadow-sm ${
+              darkMode
+                ? 'border-slate-800 bg-slate-900'
+                : 'border-slate-200 bg-white'
+            }`}
+          >
+
+            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+              <div className="flex items-center justify-between gap-3">
+
+                <div>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    {getText(
+                      orderedCategories.find(
+                        (item) =>
+                          item.id ===
+                          listCategoryId,
+                      )?.label || {
+                        en: 'Places',
+                        mr: 'ठिकाणे',
+                      },
+                      language,
+                    )}
+                  </p>
+
+                  <p className="text-xs text-slate-500">
+                    Tap a place to locate it on the map.
+                  </p>
+                </div>
+
+                <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">
+                  {
+                    openPlaces.length
+                  }{' '}
+                  places
+                </span>
+
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+
+              {openPlaces.length ===
+              0 ? (
+                <div className="px-4 py-5 text-sm text-slate-500">
+                  No places are available
+                  for this category.
+                </div>
+              ) : (
+                openPlaces.map(
+                  (
+                    place,
+                    index,
+                  ) => (
+                    <button
+                      type="button"
+                      key={`${listCategoryId}-${place.name}-${index}`}
+                      onClick={() =>
+                        selectPlace(
+                          listCategoryId,
+                          place,
+                          index,
+                        )
+                      }
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-teal-50 dark:hover:bg-slate-800"
+                    >
+
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-50 text-sm font-bold text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">
+                        {String.fromCharCode(
+                          97 + index,
+                        )}
+                        .
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+
+                        <p className="whitespace-normal break-words text-sm font-semibold leading-5 text-slate-900 dark:text-white">
+                          {place.name}
+                        </p>
+
+                        {!place.feature ? (
+                          <p className="mt-0.5 text-xs font-medium text-amber-600">
+                            Location data unavailable
+                          </p>
+                        ) : null}
+
+                        {String(
+                          place.number ??
+                            '',
+                        ).trim() ? (
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            No:{' '}
+                            {
+                              place.number
+                            }
+                          </p>
+                        ) : null}
+
+                      </div>
+
+                      <Icons.ChevronRight
+                        size={17}
+                        className="shrink-0 text-slate-400"
+                      />
+
+                    </button>
+                  ),
+                )
+              )}
+
+            </div>
+          </motion.div>
+        )}
 
     </div>
   )
