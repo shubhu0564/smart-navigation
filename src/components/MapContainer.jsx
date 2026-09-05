@@ -33,6 +33,24 @@ import {
   deriveFeatureCategory,
   extractLandmarksFromClientBuildings,
 } from '../utils/geoJsonUtils'
+
+function EnhancedMapInteraction({ enabled }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (enabled) {
+      map.dragging.enable()
+      map.touchZoom.enable()
+      return
+    }
+
+    map.dragging.disable()
+    map.touchZoom.disable()
+  }, [enabled, map])
+
+  return null
+}
+
 export default function MapContainer() {
   const mapRef = useRef(null)
   const mapWrapperRef = useRef(null)
@@ -1352,6 +1370,12 @@ export default function MapContainer() {
     clearRouting()
     mapRef.current?.closePopup()
 
+    const isOpenSpace =
+      openSpacesInSite?.features?.includes(feature) ||
+      Object.values(properties).some((value) =>
+        String(value ?? '').trim().toLowerCase().includes('open space'),
+      )
+
     const parkName =
       properties.name ??
       properties.Name ??
@@ -1371,13 +1395,13 @@ export default function MapContainer() {
 
     setSelectedLandmark({
       id: parkId,
-      name: parkName,
+      name: isOpenSpace ? 'Open Space' : parkName,
       road: properties.road ?? properties.address ?? '',
-      category: 'Park / Playground',
-      sourceCategory: 'park',
+      category: isOpenSpace ? 'Open Space' : 'Park / Playground',
+      sourceCategory: isOpenSpace ? 'openSpace' : 'park',
       latitude: destination.lat,
       longitude: destination.lng,
-      description: parkName,
+      description: isOpenSpace ? 'Open Space' : parkName,
       address: properties.address ?? properties.road ?? '',
       image: null,
       rating: 4.6,
@@ -1415,8 +1439,8 @@ export default function MapContainer() {
     }
 
     setToast({
-      en: `${parkName} selected`,
-      mr: `${parkName} निवडले`,
+      en: `${isOpenSpace ? 'Open Space' : parkName} selected`,
+      mr: `${isOpenSpace ? 'Open Space' : parkName} निवडले`,
     })
   }
 
@@ -2266,7 +2290,7 @@ id: `busStop:${latitude}:${longitude}:${String(name).toLowerCase()}`,
               : 'h-[clamp(360px,62vw,560px)] sm:h-[420px] lg:h-[520px] xl:h-[560px]'
           }`}
           style={{
-            touchAction: 'auto',
+            touchAction: isFullscreen ? 'none' : 'auto',
           }}
         >
           {/* =========================================================
@@ -2484,7 +2508,9 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
             touchZoom={isFullscreen}
             doubleClickZoom={false}
             zoomControl={!isFullscreen}
-            className="gis-map-black-white h-full w-full"
+            className={`gis-map-black-white h-full w-full ${
+              isFullscreen ? 'touch-none' : 'touch-auto'
+            }`}
             whenCreated={(map) => {
               mapRef.current = map
 
@@ -2501,6 +2527,8 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
               })
             }}
           >
+            <EnhancedMapInteraction enabled={isFullscreen} />
+
             {/* =================================================
                 SATELLITE BASE MAP
                ================================================= */}
@@ -2557,15 +2585,8 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
                 })}
                 onEachFeature={(feature, layer) => {
                   const properties = feature?.properties || {}
-                  const name = String(
-                    properties.Name ?? properties.name ?? '',
-                  ).trim()
-                  const isPlayground = String(
-                    properties['Park & Gr'] ?? properties.parkPlayground ?? '',
-                  ).trim().toLowerCase() === 'yes'
-
                   layer.on('click', () => {
-                    const label = name || (isPlayground ? 'Playground' : 'Open Space')
+                    const label = 'Open Space'
                     const destination = getFeatureLatLng(feature)
 
                     setSelectedLandmark({
