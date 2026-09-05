@@ -110,6 +110,64 @@ export default function MapContainer() {
   const parkPlaygroundInSite = useMemo(() => (geoJson.siteBoundary && geoJson.parkPlayground) ? filterGeoJsonBySite(geoJson.parkPlayground, geoJson.siteBoundary) : geoJson.parkPlayground, [geoJson.parkPlayground, geoJson.siteBoundary])
 
   const openSpacesInSite = useMemo(() => (geoJson.siteBoundary && geoJson.openSpaces) ? filterGeoJsonBySite(geoJson.openSpaces, geoJson.siteBoundary) : geoJson.openSpaces, [geoJson.openSpaces, geoJson.siteBoundary])
+
+  /*
+   * PARK / PLAYGROUND CLICKABLE DATA
+   *
+   * Open-space features must NEVER reach the clickable park layer.
+   * Keep them visible through the separate non-interactive layer below.
+   *
+   * We only exclude features that are explicitly classified as
+   * open space by their GIS attributes. We do not create or alter
+   * any geometry.
+   */
+  const clickableParkPlaygroundInSite = useMemo(() => {
+    if (!parkPlaygroundInSite?.features) return parkPlaygroundInSite
+
+    const isOpenSpaceFeature = (feature) => {
+      const p = feature?.properties || {}
+
+      const values = [
+        p.category,
+        p.Category,
+        p.type,
+        p.Type,
+        p.landuse,
+        p.landUse,
+        p.Landuse,
+        p.Land_Use,
+        p.use,
+        p.Use,
+        p.class,
+        p.Class,
+        p.feature_type,
+        p.featureType,
+        p.layer,
+        p.Layer,
+        p.name,
+        p.Name,
+      ]
+        .filter((value) => value !== null && value !== undefined)
+        .map((value) => String(value).trim().toLowerCase())
+
+      return values.some((value) =>
+        value === 'open space' ||
+        value === 'openspace' ||
+        value === 'open_space' ||
+        value === 'open-space' ||
+        value.includes('open space') ||
+        value.includes('open_space') ||
+        value.includes('open-space')
+      )
+    }
+
+    return {
+      ...parkPlaygroundInSite,
+      features: parkPlaygroundInSite.features.filter(
+        (feature) => !isOpenSpaceFeature(feature)
+      ),
+    }
+  }, [parkPlaygroundInSite])
   /*
    * ==========================================================
    * CORPORATION LANDMARKS
@@ -1061,11 +1119,16 @@ export default function MapContainer() {
 
       if (selectedCategory === 'all') {
         if (geoJson.siteBoundary) layer = L.geoJSON(geoJson.siteBoundary)
+      } else if (selectedCategory === 'landmark') {
+        if (corporationLandmarks?.features?.length > 0) {
+          layer = L.geoJSON(corporationLandmarks)
+        }
       } else if (selectedCategory === 'busStop') {
         if (busStopsInSite) layer = L.geoJSON(busStopsInSite)
       } else if (selectedCategory === 'park') {
-        if (parkPlaygroundInSite) layer = L.geoJSON(parkPlaygroundInSite)
-        else if (openSpacesInSite) layer = L.geoJSON(openSpacesInSite)
+        if (clickableParkPlaygroundInSite) {
+          layer = L.geoJSON(clickableParkPlaygroundInSite)
+        }
       } else {
         // other categories are derived from landmarks
         const features = visibleLandmarks?.features ?? []
@@ -1081,7 +1144,7 @@ export default function MapContainer() {
     } catch (error) {
       console.warn('Category focus failed:', error)
     }
-  }, [selectedCategory, geoJson.siteBoundary, geoJson.busStops, geoJson.parkPlayground, geoJson.openSpaces, visibleLandmarks])
+  }, [selectedCategory, geoJson.siteBoundary, geoJson.busStops, geoJson.parkPlayground, geoJson.openSpaces, visibleLandmarks, corporationLandmarks])
   // Category focus based on landmarks has been removed to avoid using landmarks.geojson for map positioning.
 
   /*
@@ -2509,9 +2572,9 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
     PLAYGROUND / PARK
     CLICK -> ZOOM -> FULL POLYGON RED
    ================================================= */}
-{parkPlaygroundInSite && (
+{clickableParkPlaygroundInSite && (
   <GeoJsonLayer
-    featureData={parkPlaygroundInSite}
+    featureData={clickableParkPlaygroundInSite}
     layerKey="parkPlayground"
     onFeatureClick={handleParkPlaygroundClick}
   />
@@ -2525,107 +2588,119 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
                ================================================= */}
 
             {corporationLandmarks?.features?.length > 0 && (
-              <GeoJsonLayer
-                featureData={corporationLandmarks}
-                layerKey="landmarks"
-                showLabels={
-                  selectedCategory === 'landmark' ||
-                  selectedCategory === 'landmarks'
+              <GeoJSON
+                key={`corporation-landmarks-mobile-${corporationLandmarks.features.length}`}
+                data={corporationLandmarks}
+                interactive={true}
+                style={() => ({
+                  color: '#111827',
+                  weight: 2.5,
+                  opacity: 1,
+                  fillColor: '#111827',
+                  fillOpacity: 0.35,
+                  interactive: true,
+                })}
+                pointToLayer={(feature, latlng) =>
+                  L.circleMarker(latlng, {
+                    radius: 9,
+                    color: '#111827',
+                    weight: 2,
+                    opacity: 1,
+                    fillColor: '#111827',
+                    fillOpacity: 0.75,
+                    bubblingMouseEvents: false,
+                  })
                 }
-                onFeatureClick={(feature) => {
-                  clearRouting()
+                onEachFeature={(feature, layer) => {
+                  layer.options.interactive = true
 
-                                    mapRef.current?.closePopup()
+                  layer.on({
+                    click: (event) => {
+                      L.DomEvent.stopPropagation(event)
 
-                  const properties =
-                    feature?.properties || {}
+                      clearRouting()
+                      mapRef.current?.closePopup()
 
-                  const destination =
-                    getFeatureLatLng(feature)
+                      const properties = feature?.properties || {}
+                      const destination = getFeatureLatLng(feature)
 
-                  if (!destination) {
-                    setToast({
-                      en: 'Unable to determine landmark location.',
-                      mr: 'लँडमार्कचे स्थान निश्चित करता आले नाही.',
-                    })
+                      if (!destination) {
+                        setToast({
+                          en: 'Unable to determine landmark location.',
+                          mr: 'लँडमार्कचे स्थान निश्चित करता आले नाही.',
+                        })
+                        return
+                      }
 
-                    return
-                  }
+                      const landmarkName =
+                        properties.landmarkName ??
+                        properties.name ??
+                        properties.Name ??
+                        properties.bldg_namee ??
+                        properties.bldg_name ??
+                        properties.building_name ??
+                        'Corporation Landmark'
 
-                  const landmarkName =
-                    properties.landmarkName ??
-                    properties.name ??
-                    'Corporation Landmark'
+                      const landmarkNo =
+                        properties.landmarkNo ??
+                        properties.landmark_no ??
+                        properties.bldg_no ??
+                        properties.bldg_no_1 ??
+                        '—'
 
-                  const landmarkNo =
-                    properties.landmarkNo ??
-                    '—'
+                      setSelectedLandmark({
+                        id:
+                          properties.id ??
+                          properties.ID ??
+                          `landmark-${landmarkNo}`,
+                        name: landmarkName,
+                        road: properties.road ?? properties.address ?? '',
+                        category: 'Corporation Landmark',
+                        sourceCategory: 'corporationLandmark',
+                        landmarkNo,
+                        latitude: destination.lat,
+                        longitude: destination.lng,
+                        description: landmarkName,
+                        address: properties.address ?? properties.road ?? '',
+                        image: null,
+                        rating: 4.6,
+                        steps: [],
+                        feature,
+                        fromSearch: false,
+                        fromCategory: false,
+                      })
 
-                  const selected = {
-                    id:
-                      properties.id ??
-                      `landmark-${landmarkNo}`,
+                      // Exact landmark geometry/position on both desktop and phone.
+                      try {
+                        const landmarkLayer = L.geoJSON(feature)
+                        const bounds = landmarkLayer.getBounds()
 
-                    name:
-                      landmarkName,
+                        if (bounds.isValid()) {
+                          mapRef.current?.fitBounds(bounds, {
+                            padding: [50, 50],
+                            maxZoom: DETAIL_ZOOM,
+                            animate: true,
+                          })
+                        } else {
+                          mapRef.current?.flyTo(
+                            [destination.lat, destination.lng],
+                            DETAIL_ZOOM,
+                            { duration: 0.8, animate: true },
+                          )
+                        }
+                      } catch (error) {
+                        mapRef.current?.flyTo(
+                          [destination.lat, destination.lng],
+                          DETAIL_ZOOM,
+                          { duration: 0.8, animate: true },
+                        )
+                      }
 
-                    road:
-                      properties.road ??
-                      properties.address ??
-                      '',
-
-                    category:
-                      'Corporation Landmark',
-
-                    sourceCategory:
-                      'corporationLandmark',
-
-                    landmarkNo,
-
-                    latitude:
-                      destination.lat,
-
-                    longitude:
-                      destination.lng,
-
-                    description:
-                      landmarkName,
-
-                    address:
-                      properties.address ??
-                      properties.road ??
-                      '',
-
-                    image: null,
-
-                    rating: 4.6,
-
-                    steps: [],
-
-                    feature,
-                  }
-
-                  setSelectedLandmark(
-                    selected,
-                  )
-
-                  /*
-                   * Zoom to landmark.
-                   */
-                  mapRef.current?.flyTo(
-                    [
-                      destination.lat,
-                      destination.lng,
-                    ],
-                    18,
-                    {
-                      duration: 0.8,
+                      setToast({
+                        en: `${landmarkName} selected`,
+                        mr: `${landmarkName} निवडले`,
+                      })
                     },
-                  )
-
-                  setToast({
-                    en: `${landmarkName} selected`,
-                    mr: `${landmarkName} निवडले`,
                   })
                 }}
               />
@@ -2792,7 +2867,7 @@ className="pointer-events-auto absolute left-3 right-3 top-10 z-[2300] sm:left-1
               Array.isArray(selectedLandmark.categoryFeatures) &&
               selectedLandmark.categoryFeatures.length > 0 && (
                 <GeoJSON
-                  key={`category-red-${selectedLandmark.category}-${selectedLandmark.categoryFeatures.length}`}
+                  key={`category-red-${selectedLandmark.category}-${selectedLandmark.categoryFeatures.map((feature, index) => feature?.properties?.id ?? feature?.properties?.ID ?? feature?.properties?.bldg_no ?? feature?.properties?.bldg_namee ?? feature?.properties?.name ?? index).join('|')}`}
                   data={{
                     type: 'FeatureCollection',
                     features: selectedLandmark.categoryFeatures.filter(Boolean),

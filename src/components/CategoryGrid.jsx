@@ -3,6 +3,7 @@ import * as Icons from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigation } from '../hooks/useNavigation'
 import { getText } from '../utils/helpers'
+import { filterGeoJsonBySite } from '../utils/geoJsonUtils'
 
 /*
  * ============================================================
@@ -624,76 +625,60 @@ const [showCategoryPopup, setShowCategoryPopup] =
       return { type: 'FeatureCollection', features: [] }
     }
 
-    const official = {
-      4: 'Kamla Raheja Vidyanidhi Institute for Architecture & Environmental Studies',
-      7: 'Smt SB Aarya Vidya Mandir',
-      9: 'Ecole Mondiale World School',
-      10: 'Gujarath Bhavan',
-      11: 'Goa Bhavan',
-      12: 'CDAC – Centre For Development of Advance Computing',
-      14: 'Juhu Club Millennium',
-      15: 'Shree Kalimata Temple',
-    }
-
-    const aliases = {
-      'kamla raheja vidyanidhi institute for architecture environmental studies': 4,
-      'kamla raheja vidyanidhi': 4,
-      'krvia': 4,
-      'smt sb aarya vidya mandir': 7,
-      'sb aarya vidya mandir': 7,
-      'aarya vidya mandir': 7,
-      'ecole mondiale world school': 9,
-      'ecole mondiale': 9,
-      'gujarath bhavan': 10,
-      'gujarat bhavan': 10,
-      'goa bhavan': 11,
-      'cdac': 12,
-      'centre for development of advance computing': 12,
-      'centre for development of advanced computing': 12,
-      'juhu club millennium': 14,
-      'juhu club': 14,
-      'shree kalimata temple': 15,
-      'kalimata temple': 15,
-    }
-
-    const normalize = (value) =>
-      String(value ?? '')
-        .toLowerCase()
-        .replace(/&/g, ' and ')
-        .replace(/[–—-]/g, ' ')
-        .replace(/[^a-z0-9 ]+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-
+    // Use the actual landmark polygons from client_buildings.
+    // Matching is based on the requested landmark names/aliases, so
+    // spelling differences such as "Rheja" vs "Raheja" do not break
+    // the Landmark category button on mobile.
+    const definitions = PLACE_DEFINITIONS.landmark || []
+    const used = new Set()
     const features = []
-    source.features.forEach((feature) => {
-      const props = feature?.properties || {}
-      const name = normalize(
-        props.bldg_namee ?? props.bldg_name ??
-        props.building_name ?? props.name ?? props.Name ?? ''
-      )
-      const landmarkNo = aliases[name]
-      if (!landmarkNo || !official[landmarkNo]) return
+
+    definitions.forEach((place) => {
+      const aliases = aliasesFor(place.name)
+      const match = source.features.find((feature, index) => {
+        if (used.has(index)) return false
+
+        const props = feature?.properties || {}
+        const rawName =
+          props.bldg_namee ?? props.bldg_name ??
+          props.building_name ?? props.name ?? props.Name ?? ''
+        const current = normalise(rawName)
+        if (!current) return false
+
+        return aliases.some((alias) => {
+          if (!alias) return false
+          if (current === alias) return true
+          if (current.includes(alias) || alias.includes(current)) return true
+
+          // Handle common spelling/wording differences while still
+          // requiring meaningful overlap.
+          const words = new Set(current.split(' '))
+          const aliasWords = alias.split(' ')
+          const common = aliasWords.filter((word) => words.has(word))
+          return common.length >= Math.min(2, aliasWords.length)
+        })
+      })
+
+      if (!match) return
+
+      const matchIndex = source.features.indexOf(match)
+      used.add(matchIndex)
 
       features.push({
-        ...feature,
+        ...match,
         properties: {
-          ...props,
-          id: `corporation-landmark-${landmarkNo}`,
-          landmarkNo,
-          landmarkName: official[landmarkNo],
-          name: official[landmarkNo],
+          ...(match.properties || {}),
+          id: `corporation-landmark-${place.number}`,
+          landmarkNo: place.number,
+          landmarkName: place.name,
+          name: place.name,
           category: 'corporationLandmark',
           categoryLabel: 'Corporation Landmark',
         },
       })
     })
 
-    const unique = Array.from(
-      new Map(features.map((feature) => [feature.properties.landmarkNo, feature])).values()
-    )
-    const result = { type: 'FeatureCollection', features: unique }
-
+    const result = { type: 'FeatureCollection', features }
     return geoJson?.siteBoundary
       ? filterGeoJsonBySite(result, geoJson.siteBoundary)
       : result
@@ -717,10 +702,16 @@ const [showCategoryPopup, setShowCategoryPopup] =
       add(geoJson.openSpaces)
     }
 
-    // Verified corporation landmarks use the actual polygons from
-    // the old client_buildings GeoJSON first.
+    // Landmarks can come from the verified corporation-building layer,
+    // the park/playground layer, or the client building layer.
+    // Searching all three is important because some named landmarks
+    // (for example gardens/parks) are not building polygons.
     if (canonical === 'landmark') {
       add(getVerifiedCorporationLandmarks())
+      add(geoJson.parkPlayground)
+      add(geoJson.openSpaces)
+      add(geoJson.landmarks)
+      add(geoJson.corporationLandmarks)
     }
 
     // Generic buildings remain a fallback for other named places.
@@ -859,8 +850,14 @@ const [showCategoryPopup, setShowCategoryPopup] =
         ? featureNumber(feature)
         : place.number
 
+      const resolvedName =
+        String(place?.name ?? '').trim() ||
+        String(featureLabel(feature) ?? '').trim() ||
+        `${canonical === 'landmark' ? 'Landmark' : canonical === 'park' ? 'Park / Playground' : canonical === 'busStop' ? 'Bus Stop' : 'Place'} ${index + 1}`
+
       return {
         ...place,
+        name: resolvedName,
         number: actualNumber || place.number,
         feature,
         index,
@@ -964,33 +961,37 @@ const [showCategoryPopup, setShowCategoryPopup] =
    */
 
   const handleCategoryClick = (category) => {
-    const canonical = canonicalCategoryId(category.id)
-    const places = getPlacesForCategory(category.id)
+    const canonical = canonicalCategoryId(category?.id)
+
+    // LANDMARK: always use the canonical id. Some category data uses
+    // corporationLandmark/corporationLandmarks, which previously caused
+    // the card state/list/focus flow to disagree on mobile.
+    const effectiveCategory = canonical === 'landmark' ? 'landmark' : canonical
+    const places = getPlacesForCategory(effectiveCategory)
+
     const features = places
       .map((place) => place?.feature)
-      .filter(Boolean)
+      .filter((feature) => feature?.geometry)
 
-    setSelectedCategory(category.id)
-    setOpenCategoryId(category.id)
+    setSelectedCategory(effectiveCategory)
+    setOpenCategoryId(effectiveCategory)
     setShowCategoryPopup(false)
 
-    // Selecting a category focuses and highlights the real GIS features
-    // for that category. No white category page/popup is opened.
     setSelectedLandmark({
-      id: `category-group-${canonical}`,
-      name: getText(category.label, language),
-      category: canonical,
-      categoryId: canonical,
+      id: `category-group-${effectiveCategory}`,
+      name: getText(category?.label, language),
+      category: effectiveCategory,
+      categoryId: effectiveCategory,
       sourceCategory: 'categoryGroup',
       latitude: null,
       longitude: null,
-      description: getText(category.label, language),
+      description: getText(category?.label, language),
       address: '',
       image: null,
       rating: 4.6,
       steps: [],
       feature: null,
-      categoryPlaces: [],
+      categoryPlaces: places,
       categoryFeatures: features,
       fromSearch: false,
       fromCategory: false,
@@ -1006,9 +1007,8 @@ const [showCategoryPopup, setShowCategoryPopup] =
   const listCategoryId =
     showPlacesList &&
     selectedCategory &&
-    selectedCategory !==
-      'all'
-      ? selectedCategory
+    selectedCategory !== 'all'
+      ? canonicalCategoryId(selectedCategory)
       : null
 
   const openPlaces =
@@ -1043,8 +1043,8 @@ const [showCategoryPopup, setShowCategoryPopup] =
                 Icons.Compass
 
               const active =
-                selectedCategory ===
-                category.id
+                canonicalCategoryId(selectedCategory) ===
+                canonicalCategoryId(category.id)
 
               return (
                 <motion.button
@@ -1059,11 +1059,15 @@ const [showCategoryPopup, setShowCategoryPopup] =
                   key={
                     category.id
                   }
-                  onClick={() =>
-                    handleCategoryClick(
-                      category,
-                    )
-                  }
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    handleCategoryClick(category)
+                  }}
+                  onTouchEnd={(event) => {
+                    event.stopPropagation()
+                  }}
+                  style={{ touchAction: 'manipulation' }}
                   className={`rounded-[16px] border p-2 text-left shadow-sm transition duration-200 sm:rounded-[24px] sm:p-4 ${
                     active
                       ? 'border-teal-600 bg-teal-600 text-white shadow-lg'
@@ -1253,130 +1257,7 @@ const [showCategoryPopup, setShowCategoryPopup] =
       </div>
     </div>
   )}
-      {showPlacesList &&
-        listCategoryId && (
-          <motion.div
-            initial={{
-              opacity: 0,
-              y: 6,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-            }}
-            className={`overflow-hidden rounded-[22px] border shadow-sm ${
-              darkMode
-                ? 'border-slate-800 bg-slate-900'
-                : 'border-slate-200 bg-white'
-            }`}
-          >
 
-            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-              <div className="flex items-center justify-between gap-3">
-
-                <div>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">
-                    {getText(
-                      orderedCategories.find(
-                        (item) =>
-                          item.id ===
-                          listCategoryId,
-                      )?.label || {
-                        en: 'Places',
-                        mr: 'ठिकाणे',
-                      },
-                      language,
-                    )}
-                  </p>
-
-                  <p className="text-xs text-slate-500">
-                    Tap a place to locate it on the map.
-                  </p>
-                </div>
-
-                <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">
-                  {
-                    openPlaces.length
-                  }{' '}
-                  places
-                </span>
-
-              </div>
-            </div>
-
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-
-              {openPlaces.length ===
-              0 ? (
-                <div className="px-4 py-5 text-sm text-slate-500">
-                  No places are available
-                  for this category.
-                </div>
-              ) : (
-                openPlaces.map(
-                  (
-                    place,
-                    index,
-                  ) => (
-                    <button
-                      type="button"
-                      key={`${listCategoryId}-${place.name}-${index}`}
-                      onClick={() =>
-                        selectPlace(
-                          listCategoryId,
-                          place,
-                          index,
-                        )
-                      }
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-teal-50 dark:hover:bg-slate-800"
-                    >
-
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-50 text-sm font-bold text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">
-                        {String.fromCharCode(
-                          97 + index,
-                        )}
-                        .
-                      </span>
-
-                      <div className="min-w-0 flex-1">
-
-                        <p className="whitespace-normal break-words text-sm font-semibold leading-5 text-slate-900 dark:text-white">
-                          {place.name}
-                        </p>
-
-                        {!place.feature ? (
-                          <p className="mt-0.5 text-xs font-medium text-amber-600">
-                            Location data unavailable
-                          </p>
-                        ) : null}
-
-                        {String(
-                          place.number ??
-                            '',
-                        ).trim() ? (
-                          <p className="mt-0.5 text-xs text-slate-500">
-                            No:{' '}
-                            {
-                              place.number
-                            }
-                          </p>
-                        ) : null}
-
-                      </div>
-
-                      <Icons.ChevronRight
-                        size={17}
-                        className="shrink-0 text-slate-400"
-                      />
-
-                    </button>
-                  ),
-                )
-              )}
-
-            </div>
-          </motion.div>
-        )}
 
     </div>
   )
